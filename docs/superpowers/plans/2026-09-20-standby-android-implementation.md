@@ -170,20 +170,20 @@ standby-android/
 - Create: `app/src/main/java/com/hoandesign/standby/ui/components/PagerIndicators.kt`
 - Create: `app/src/main/java/com/hoandesign/standby/ui/layout/MainStandbyPager.kt`
 
-- [ ] **Step 1: Horizontal Pager**
+- [x] **Step 1: Horizontal Pager**
   Using Compose `HorizontalPager`, implement smooth paging between:
   1. `DualWidgetScreen`
   2. `HeroClockScreen`
   3. `NowPlayingMediaScreen`
 
-- [ ] **Step 2: Vertical Stack Pagers**
+- [x] **Step 2: Vertical Stack Pagers**
   Using Compose `VerticalPager`, implement independent vertical paging within Left Slot and Right Slot.
   Add snap haptics using `LocalHapticFeedback.current` and subtle vertical page dot indicators.
 
-- [ ] **Step 3: Single vs. Dual Quick-Toggle**
+- [x] **Step 3: Single vs. Dual Quick-Toggle**
   Add double-tap or long-press gesture detector on any widget to expand it into full-screen single widget mode with smooth spring animation.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add . && git commit -m "feat(nav): add dual-axis pager system and single-dual widget toggle"`
 
 ---
