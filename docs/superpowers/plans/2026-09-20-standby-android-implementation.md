@@ -197,22 +197,22 @@ standby-android/
 - Create: `app/src/main/java/com/hoandesign/standby/ui/widgets/clock/SolarArcClockWidget.kt`
 - Create: `app/src/main/java/com/hoandesign/standby/ui/widgets/clock/RadialClockWidget.kt`
 
-- [ ] **Step 1: `AnalogClockWidget.kt`**
+- [x] **Step 1: `AnalogClockWidget.kt`**
   Canvas-drawn Swiss/Bauhaus dial with 12 numeral markers, 60 tick lines, white hour & minute hands, orange continuous sweeping second hand, and custom city label.
 
-- [ ] **Step 2: `BigDigitalClockWidget.kt`**
+- [x] **Step 2: `BigDigitalClockWidget.kt`**
   Massive bold typography (iOS 18 style, e.g. `09:41`), next system alarm indicator, date badge, and tint color selector.
 
-- [ ] **Step 3: `RetroFlipClockWidget.kt`**
+- [x] **Step 3: `RetroFlipClockWidget.kt`**
   Vintage split-flap flip clock with 3D card flipping animation on minute transitions.
 
-- [ ] **Step 4: `SolarArcClockWidget.kt`**
+- [x] **Step 4: `SolarArcClockWidget.kt`**
   Visual sky arc tracking sun position, daylight elapsed percentage, sunrise and sunset times.
 
-- [ ] **Step 5: `RadialClockWidget.kt`**
+- [x] **Step 5: `RadialClockWidget.kt`**
   Replicate reference screenshot #2: outstretched 12, 3, 6, 9 numerals with angled beam tick marks and horizontal layout.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   `git add . && git commit -m "feat(widgets): implement complete 5-style clock suite"`
 
 ---
