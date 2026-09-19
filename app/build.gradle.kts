@@ -6,11 +6,16 @@ plugins {
   alias(libs.plugins.kotlin.serialization)
 }
 
-val keystorePropertiesFile =
+val keystorePropertiesFile = listOf(
+  file("keystore.properties"),
   file("${System.getProperty("user.home")}/Documents/Projects/my-moves-signing/keystore.properties")
+).firstOrNull { it.exists() && it.canRead() }
+
 val keystoreProperties = Properties().apply {
-  if (keystorePropertiesFile.exists()) {
-    keystorePropertiesFile.inputStream().use { load(it) }
+  if (keystorePropertiesFile != null) {
+    runCatching {
+      keystorePropertiesFile.inputStream().use { load(it) }
+    }
   }
 }
 
@@ -22,28 +27,39 @@ android {
     applicationId = "com.hoandesign.standby"
     minSdk = 26
     targetSdk = 36
-    versionCode = 2
-    versionName = "1.0.1"
+    versionCode = 3
+    versionName = "1.0.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
     create("release") {
-      if (keystorePropertiesFile.exists()) {
-        storeFile = file(keystoreProperties.getProperty("storeFile"))
+      val storePath = keystoreProperties.getProperty("storeFile")
+      if (!storePath.isNullOrBlank() && file(storePath).exists()) {
+        storeFile = file(storePath)
         storePassword = keystoreProperties.getProperty("storePassword")
         keyAlias = keystoreProperties.getProperty("keyAlias")
         keyPassword = keystoreProperties.getProperty("keyPassword")
+      } else {
+        val debugKeystore = file("${System.getProperty("user.home")}/.android/debug.keystore")
+        if (debugKeystore.exists()) {
+          storeFile = debugKeystore
+          storePassword = "android"
+          keyAlias = "androiddebugkey"
+          keyPassword = "android"
+        }
       }
     }
   }
 
   buildTypes {
     release {
-      isMinifyEnabled = false
-      signingConfig = if (keystorePropertiesFile.exists()) {
-        signingConfigs.getByName("release")
+      isMinifyEnabled = true
+      isShrinkResources = true
+      val releaseSigning = signingConfigs.getByName("release")
+      signingConfig = if (releaseSigning.storeFile != null) {
+        releaseSigning
       } else {
         signingConfigs.getByName("debug")
       }
