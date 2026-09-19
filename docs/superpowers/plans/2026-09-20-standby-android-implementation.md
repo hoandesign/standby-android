@@ -225,16 +225,16 @@ standby-android/
 - Create: `app/src/main/java/com/hoandesign/standby/ui/widgets/timer/DeskTimerWidget.kt`
 - Create: `app/src/main/java/com/hoandesign/standby/data/CalendarRepository.kt`
 
-- [ ] **Step 1: `MonthCalendarWidget.kt`**
+- [x] **Step 1: `MonthCalendarWidget.kt`**
   Replicate reference screenshot #1: bold red month title, `S M T W T F S` headers, current day circle highlight, and weekend dimming.
 
-- [ ] **Step 2: `AgendaWidget.kt`**
+- [x] **Step 2: `AgendaWidget.kt`**
   Upcoming meeting countdown, event title, room/location, and colored vertical category bar. Seamless fallback to built-in offline agenda if calendar permission is not granted.
 
-- [ ] **Step 3: `DeskTimerWidget.kt`**
+- [x] **Step 3: `DeskTimerWidget.kt`**
   Pomodoro focus timer & stopwatch with quick presets (25m, 15m, 5m), circular animated progress ring, and Start / Pause / Reset controls.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add . && git commit -m "feat(widgets): add MonthCalendar, Agenda, and DeskTimer widgets"`
 
 ---
@@ -251,22 +251,22 @@ standby-android/
 - Create: `app/src/main/java/com/hoandesign/standby/data/WeatherRepository.kt`
 - Create: `app/src/main/java/com/hoandesign/standby/data/BatteryMonitor.kt`
 
-- [ ] **Step 1: `WeatherWidget.kt` & `WeatherRepository.kt`**
+- [x] **Step 1: `WeatherWidget.kt` & `WeatherRepository.kt`**
   Real-time temperature, condition emoji/icon, high/low range, AQI, and rain chance using Open-Meteo API with offline cached defaults.
 
-- [ ] **Step 2: `BatteryWidget.kt` & `BatteryMonitor.kt`**
+- [x] **Step 2: `BatteryWidget.kt` & `BatteryMonitor.kt`**
   Live percentage via `BatteryManager`, charging speed ("⚡ Fast Charging", "⚡ Wireless Qi"), battery health, wattage, and estimated time to full.
 
-- [ ] **Step 3: `MusicPlayerWidget.kt`**
+- [x] **Step 3: `MusicPlayerWidget.kt`**
   Full-screen & compact now playing with album artwork, animated rotating vinyl record, track title, artist, scrub bar, and media controls (Play/Pause/Next/Prev) with built-in lo-fi sample track.
 
-- [ ] **Step 4: `SystemBentoWidget.kt`**
+- [x] **Step 4: `SystemBentoWidget.kt`**
   Replicate reference screenshot #4: Wi-Fi/Bluetooth status badges, disk storage ring (e.g. `153 GB remain`), RAM gauge, and brightness slider.
 
-- [ ] **Step 5: `VibesWidget.kt` & `PhotoFrameWidget.kt`**
+- [x] **Step 5: `VibesWidget.kt` & `PhotoFrameWidget.kt`**
   Bedside relaxation soundscape (Rain, Campfire, Night Wind) with auto-sleep timer, and ambient photo frame with clock overlay.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
   `git add . && git commit -m "feat(widgets): add Weather, Battery, MusicPlayer, SystemBento, Vibes, and PhotoFrame"`
 
 ---
@@ -279,16 +279,16 @@ standby-android/
 - Create: `app/src/main/java/com/hoandesign/standby/MainActivity.kt`
 - Create: `app/src/main/res/xml/standby_dream.xml`
 
-- [ ] **Step 1: `ChargingReceiver.kt`**
+- [x] **Step 1: `ChargingReceiver.kt`**
   Listens for `ACTION_POWER_CONNECTED`. Checks if device is in landscape orientation; if user setting is enabled, launches `MainActivity` automatically.
 
-- [ ] **Step 2: `StandbyDreamService.kt`**
+- [x] **Step 2: `StandbyDreamService.kt`**
   Extends Android `DreamService` and sets content to Compose `MainStandbyScreen`. Enables the app to be selected in Android `Settings > Display > Screen Saver`.
 
-- [ ] **Step 3: `MainActivity.kt`**
+- [x] **Step 3: `MainActivity.kt`**
   Sets edge-to-edge window insets, `FLAG_KEEP_SCREEN_ON` while docked, registers ambient light sensor listener, and hosts the full StandBy Compose UI.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add . && git commit -m "feat(system): implement ChargingReceiver and StandbyDreamService"`
 
 ---
@@ -300,14 +300,14 @@ standby-android/
 - Create: `scripts/ship_play_internal.sh`
 - Create: `README.md`
 
-- [ ] **Step 1: Configure Play Console automated upload**
+- [x] **Step 1: Configure Play Console automated upload**
   Adapt `play_upload_internal.py` pointing to verified service account `/Users/lap16030-local/Documents/Projects/my-moves-signing/play-service-account.json` for `com.hoandesign.standby` (or `com.hoan.standby`).
 
-- [ ] **Step 2: Add `ship_play_internal.sh`**
+- [x] **Step 2: Add `ship_play_internal.sh`**
   One-command automated release build (`./gradlew :app:bundleRelease`) followed by automated track upload to Play Console Internal Testing.
 
-- [ ] **Step 3: Push to GitHub repository**
+- [x] **Step 3: Push to GitHub repository**
   Add remote `git@github.com:hoandesign/standby-android.git` (or HTTPS) and push `main` branch.
 
-- [ ] **Step 4: Commit**
-  `git add . && git commit -m "chore: add Play Console automated deployment scripts and documentation"`
+- [x] **Step 4: Commit**
+  `git add . && git commit -m "chore: add Play Console automated deployment pipeline and documentation"`
