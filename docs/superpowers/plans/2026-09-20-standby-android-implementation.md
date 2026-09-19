@@ -143,22 +143,22 @@ standby-android/
 - Create: `app/src/main/java/com/hoandesign/standby/ui/layout/DualStackContainer.kt`
 - Create: `app/src/main/java/com/hoandesign/standby/ui/layout/QuadBentoContainer.kt`
 
-- [ ] **Step 1: Define `ScreenRatio` Archetypes**
+- [x] **Step 1: Define `ScreenRatio` Archetypes**
   - `UltraTallLandscape` ($W/H \ge 1.9$, e.g. 21:9, 22:9)
   - `StandardLandscape` ($1.4 \le W/H < 1.9$, e.g. 16:9, 16:10, 3:2)
   - `SquarishFoldable` ($0.85 \le W/H < 1.4$, e.g. 1.08:1 OnePlus Open, Fold 8 inner)
   - `TallPortrait` ($W/H < 0.85$, e.g. 9:19.5, 9:20, 9:22 vertical desk stands)
 
-- [ ] **Step 2: Implement `AdaptiveLayoutEngine.kt`**
+- [x] **Step 2: Implement `AdaptiveLayoutEngine.kt`**
   Uses `BoxWithConstraints` to compute the active archetype dynamically on window resize or rotation. Routes to:
   - `DualStackContainer` in Landscape (side-by-side with ratio-scaled card width)
   - `DualStackContainer` in Portrait (top-to-bottom with 4:5 stretched cards)
   - `QuadBentoContainer` on Squarish Foldables (2x2 grid filling 4 quadrants)
 
-- [ ] **Step 3: Implement `DualStackContainer.kt` & `QuadBentoContainer.kt`**
+- [x] **Step 3: Implement `DualStackContainer.kt` & `QuadBentoContainer.kt`**
   Slots left/right (or top/bottom) widgets into styled rounded containers with OLED hairline borders, padding scaling with screen density, and zero letterboxing.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
   `git add . && git commit -m "feat(layout): implement AdaptiveLayoutEngine supporting foldables and tall screens"`
 
 ---
