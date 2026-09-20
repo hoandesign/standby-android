@@ -146,19 +146,28 @@ flowchart TD
 ### Step 5: Blind Independent Auditor & Design Critic Protocol (Zero-Bias Grilling)
 To ensure the audit is never biased by developer claims or superficial checklist compliance:
 1. **Fresh Blind Auditor Mandate:** For every new audit cycle, spawn a **brand-new independent subagent** with zero prior conversation history.
-2. **Dedicated Design Critic (`design_auditor`):** In addition to code verification, a specialized **Principal Design Critic** subagent must ruthlessly audit UI/UX, typography, and visual polish like a world-class Head of Design:
+2. **Strict Auditor Prompting Rules (No Pre-Packaged Checklists):**
+   - **NEVER** tell the auditor "Here is what I implemented, please verify my fix." Doing so induces confirmation bias and leads to rubber-stamp approvals.
+   - **ALWAYS** prompt the auditor with `scripts/auditor_prompt_template.md`: provide ONLY the user's raw requests/goals, target build number, and explicit instructions to assume the code is buggy and aggressively stress-test failure domains.
+   - **Mandatory 4 Stress-Test Domains in Prompt:**
+     1. *Active Gesture Transitions:* Test `isScrollInProgress` for indicators during dragging, not just resting states.
+     2. *Orientation & Aspect Ratio Collisions:* Test portrait stacked columns vs landscape side-by-side rows.
+     3. *Boundary & Fallback Data:* Test edge values (0° calculating negative temps, ungranted permissions, null locations).
+     4. *Typography & Optical Margins:* Verify single-line bounds (`maxLines = 1`, `TextOverflow.Ellipsis`), proportional numeral offsets, zero emojis, pure OLED `#000000`.
+3. **Dedicated Design Critic (`design_auditor`):** In addition to code verification, a specialized **Principal Design Critic** subagent must ruthlessly audit UI/UX, typography, and visual polish like a world-class Head of Design:
    * **Element Collisions & Dynamic Overlaps:** Check that moving hands (hour, minute, sweeping seconds) NEVER pass over or obscure static badges (alarm, date, weather, city labels).
    * **12-Hour Sweep Simulation:** Mathematically verify that throughout a full 12-hour rotation, hands maintain optical clearance from all dials and text.
    * **Reference Design Parity:** Compare pixel-by-pixel against Apple StandBy reference designs (e.g. horizontal midline placement for alarms/dates on horizon dials, widescreen full-bleed expansion).
    * **Typography & Optical Margins:** Verify tight negative tracking (`-0.03em` to `-0.05em`), minimum 8–12dp breathing room between all glyphs and boundaries, and zero raw OS emojis on bespoke hardware clock dials.
-3. **Direct Inspection Mandate:** The auditor must not be fed pre-packaged summaries. It must independently inspect raw screenshots and code.
-4. **5-Pillar Scorecard:**
+4. **Direct Inspection Mandate:** The auditor must not be fed pre-packaged summaries. It must independently inspect raw screenshots and code.
+5. **5-Pillar Scorecard & 10/10 Score Cap:**
    * Aesthetics & Visual Polish (0–10)
    * Architecture & Code Quality (0–10)
    * Gesture Handling & UX (0–10)
    * Battery Efficiency & OLED Protection (0–10)
    * Production Readiness (0–10)
-5. **Hard Gate:** If the overall score is below **9.5 / 10** or ANY visual collision/defect is found, the loop routes back to Step 2 for immediate patching.
+   * *Rule:* A 10/10 score is forbidden unless code line references and visual proof demonstrate zero defects across all 4 stress-test domains.
+6. **Hard Gate:** If the overall score is below **9.5 / 10** or ANY visual collision/defect is found, the loop routes back to Step 2 for immediate patching.
 
 ### Step 6: Automated Google Play Rollout & Git Sync
 * Upload the signed release bundle directly to the Google Play Console `internal` testing track:

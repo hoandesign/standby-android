@@ -69,6 +69,29 @@ def check_audit_report(version_code: int) -> list[str]:
     if "Scorecard" not in content and "Score" not in content:
         errors.append(f"Audit report in {target_file.name} lacks an objective Scorecard table!")
 
+    # Enforce Rule 11: Anti-Rubber-Stamp Mandate across 4 critical failure domains
+    lower_content = content.lower()
+    has_gesture = "gesture" in lower_content or "scroll" in lower_content
+    has_orientation = "orientation" in lower_content or "portrait" in lower_content or "landscape" in lower_content
+    has_boundary = "boundary" in lower_content or "fallback" in lower_content
+    has_typography = "typography" in lower_content or "overflow" in lower_content or "optical" in lower_content
+
+    missing_domains = []
+    if not has_gesture:
+        missing_domains.append("Active Gesture Transitions")
+    if not has_orientation:
+        missing_domains.append("Multi-Orientation Bounds")
+    if not has_boundary:
+        missing_domains.append("Boundary / Fallback Data")
+    if not has_typography:
+        missing_domains.append("Typography / Optical Margins")
+
+    if missing_domains:
+        errors.append(
+            f"Audit report in {target_file.name} violates Rule 11 (Anti-Rubber-Stamp Mandate). "
+            f"Missing required stress-test domains: {', '.join(missing_domains)}"
+        )
+
     return errors
 
 
