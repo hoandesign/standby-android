@@ -8,35 +8,43 @@ This document outlines the autonomous development loop, design principles, testi
 
 Every iteration of StandBy Android must rigorously adhere to the following non-negotiable principles:
 
-1. **Zero-Recomposition Battery Efficiency:**
+1. **Zero-Recomposition Battery Efficiency & Monotonic OLED Protection:**
    * Overnight docking must not drain battery or heat up the device.
    * Continuous animations (such as the sweeping second hand in `AnalogClockWidget`) must use `DrawScope` GPU drawing with `rememberInfiniteTransition`, ensuring the Compose tree recomposition rate remains **strictly 0 fps**.
    * Background animations (such as the vinyl disc in `MusicPlayerWidget`) must safely pause rendering when playback is paused (`isPlaying == false`).
-   * Subpixel Lissajous pixel-shifting (`Modifier.pixelShift`) must continuously shift UI coordinates within $\pm 1.5\text{dp}$ to prevent OLED burn-in without human-perceptible jitter.
+   * Subpixel Lissajous pixel-shifting (`Modifier.pixelShift` in `PixelShifter.kt`) must use monotonic `android.os.SystemClock.elapsedRealtime()` (immune to wall-clock or NTP shifts).
+   * Shift cycles must maintain discrete rest intervals: **118 seconds of static sleep** (zero recomposition, zero CPU/GPU wake cycles) followed by a **2-second linear subpixel migration** within $\pm 1.5\text{dp}$.
 
 2. **Zero Mocked Content (Real Android System Telemetry):**
-   * **Media:** Live playback captured through `StandbyMediaListenerService` (`NotificationListenerService`) with automatic `onListenerDisconnected -> requestRebind` resilience.
+   * **Media:** Live playback captured through `StandbyMediaListenerService` (`NotificationListenerService`) with automatic `onListenerDisconnected -> requestRebind` resilience and authentic "No Media Playing" empty state.
    * **Weather & Location:** Real GPS location and reverse-geocoded city naming via Google Play Services `FusedLocationProviderClient` with `PRIORITY_BALANCED_POWER_ACCURACY` and graceful fallback to `LocationManager`.
-   * **Calendar & Schedule:** Safely guarded against device-locked states (`keyguardManager.isDeviceLocked`) during Direct Boot.
+   * **Calendar & Schedule:** Every calendar item must explicitly display the **event date** (e.g. `UP NEXT · Today, Sep 20`) with relative micro-tags (`[ TODAY ]`, `[ TOMORROW ]`, `[ SEP 22 ]`), never bare time strings. Safely guarded against device-locked states (`keyguardManager.isDeviceLocked`) during Direct Boot.
    * **Battery:** Live percentage, charging speed, voltage, and temperature metrics via `BatteryMonitor`.
 
-3. **Modular Bento Slot Customization:**
-   * Both Left and Right slots support infinite customizable stacks of widgets.
-   * Long-press in Edit Mode elevates the card (1.04f scale elevation, subtle glow) and enables genuine drag-and-drop reordering with spring animations.
-   * Boundary protection ensures the last widget cannot be removed. Reset-to-default capability is always available.
+3. **Auto-Hiding Floating Navigation & Zero Collision Protocol:**
+   * **Auto-Hide:** Floating top navigation bar (`StandbyTopNavigationMenu.kt`) auto-hides after 4.5 seconds of inactivity.
+   * **Zero Collision:** When the menu is visible or in Edit Mode, content cards shift down via an animated top inset (`navTopInset by animateDpAsState(if (isNavVisible || isEditMode) 48.dp else 0.dp)`), completely eliminating overlap with clock numerals ("12") or calendar month headers ("SEPTEMBER").
+   * **Non-Blocking Tap Interception:** Tap-to-show navigation uses `awaitEachGesture { awaitFirstDown(pass = PointerEventPass.Initial) }` on the root Box. This intercepts touches before child composables (buttons, sliders, pagers) can swallow them, guaranteeing instant navigation wakeup from anywhere on screen.
+   * **100% Fullscreen Bento:** When the navigation bar auto-hides, `navTopInset` animates to `0.dp`, allowing cards to expand to 100% of the screen.
 
-4. **14 Bespoke Fullscreen Ambient Dashboards:**
+4. **Unified Edit Mode & Single-Header Architecture:**
+   * Edit Mode is controlled solely by the top navigation bar (`StandbyTopNavigationMenu.kt`):
+     - Left: `[ EDITING BENTO ]` status badge.
+     - Center: `[ ⟲ Reset Defaults ]` pill.
+     - Right: `[ Done ]` action button.
+   * Bento cards must **never** render duplicate inner headers, slot title rows, or redundant action buttons.
+   * Draggable widget stack (`EditModeWidgetStack.kt`) uses `LazyListState.layoutInfo` for dynamic item height measurement (never hardcoded pixel heights), with long-press elevation (`1.04f` scale + shadow) and snap haptic feedback.
+   * Boundary protection ensures a minimum of 1 widget per slot stack.
+
+5. **Responsive Scaling Across 3:4, Squarish Foldables & Tablets:**
+   * Every widget (Analog Clock, Radial Clock, Big Digital Clock, Calendar, Weather) must scale within a `minOf(width, height)` bounding box with centered alignment.
+   * Never rely on fixed aspect ratio assumptions that crop numerals on 3:4 tablets (e.g. 1536x2048) or squarish foldables (e.g. OnePlus Open ~1.08:1, Galaxy Z Fold inner screen ~1.16:1).
+
+6. **14 Bespoke Fullscreen Ambient Dashboards:**
    * Every single widget in `StandbyWidgetRegistry` has a dedicated edge-to-edge fullscreen presentation (not just a centered compact card).
    * Large digital clocks feature a dynamic **OLED Wireframe Mode** (`Stroke(4f)`) that triggers automatically during Night Mode or after extended idle time to save power and prevent emitter wear.
 
-5. **Adaptive Multi-Form Factor Engine:**
-   * Dynamically adapts across 4 distinct aspect ratio archetypes:
-     * `ULTRA_TALL_LANDSCAPE` ($W/H \ge 1.85$): 21:9 and 22.1:9 cover screens (Galaxy Z Fold).
-     * `STANDARD_LANDSCAPE` ($1.35 \le W/H < 1.85$): 16:9, 16:10, 3:2 tablets and standard phones.
-     * `SQUARISH_FOLDABLE` ($0.85 \le W/H < 1.35$): Foldable inner screens (OnePlus Open, Fold 8, Honor Magic V3) using a 2x2 Quad-Bento layout.
-     * `TALL_PORTRAIT` ($W/H < 0.85$): 9:20 vertical charging stands.
-
-6. **Apple StandBy Visual Fidelity:**
+7. **Apple StandBy Visual Fidelity:**
    * Bundled official **Inter variable font** with negative tracking (`-0.05.em` for hero numerals).
    * Pitch-black OLED backgrounds (`#000000`), subtle glassmorphic translucent surfaces (`0xEE121215`), and hairline borders (`0x28FFFFFF`).
 
@@ -48,21 +56,21 @@ When executing any task or enhancement, the assistant follows this continuous 6-
 
 ```mermaid
 flowchart TD
-    A["Step 1: Ground in User Goals & Requirements"] --> B["Step 2: Architecture & Code Implementation"]
+    A["Step 1: Ground in User Goals & Feedback"] --> B["Step 2: Architecture & Code Implementation"]
     B --> C["Step 3: Local Verification (Unit Tests & Release Build)"]
     C --> D["Step 4: Physical Device Testing (Firebase Test Lab)"]
-    D --> E["Step 5: Independent Adversarial Auditor (Unbiased Grilling)"]
-    E -->|Score < 9.5 or Caveats Found| B
-    E -->|Score >= 9.5 & Approved| F["Step 6: Automated Play Store Rollout"]
+    D --> E["Step 5: Blind Independent Auditor (Zero-Bias Grilling)"]
+    E -->|Score < 9.5 or Defects Found| B
+    E -->|Score >= 9.5 & Approved| F["Step 6: Automated Play Store Rollout & Git Push"]
 ```
 
-### Step 1: Goal Grounding & Plan Verification
-* Inspect user feedback, complaints, and original goals.
-* Avoid band-aid fixes or cosmetic compromises (e.g. font aliasing or legacy API shortcuts).
+### Step 1: Goal Grounding & Feedback Verification
+* Review user feedback, previous defect reports, and original design goals.
+* Avoid band-aid fixes or cosmetic shortcuts. Fix root causes at the architectural level.
 
-### Step 2: Code Implementation & Refactoring
-* Implement features using modern Jetpack Compose, Kotlin coroutines/flows, and official Google APIs.
-* Maintain clean separation between presentation, state, and domain data sources.
+### Step 2: Modular Implementation & Clean Refactoring
+* Keep files focused and modular (< 500 lines per file).
+* Separate concerns: coordinator (`MainStandbyPager.kt`), top bar (`StandbyTopNavigationMenu.kt`), slot container (`DynamicSlotCard.kt`), and edit stack (`EditModeWidgetStack.kt`).
 
 ### Step 3: Local Build & Unit Verification
 * Execute all unit tests:
@@ -73,37 +81,41 @@ flowchart TD
   ```bash
   ./gradlew bundleRelease assembleRelease
   ```
-* Verify that bundle size remains minimal (< 4.0 MB).
+* Verify bundle size remains minimal (< 4.2 MB).
 
 ### Step 4: Real Physical Device Testing (Firebase Test Lab)
-* Dispatch testing directly to a physical Google Pixel 9 running Android 16 (API 36) in landscape orientation:
+* Dispatch testing directly to a physical Google Pixel 9 running Android 16 (API 36) in both landscape and portrait orientations:
   ```bash
   /opt/homebrew/bin/gcloud firebase test android run \
     --type=robo \
     --app=app/build/outputs/apk/release/app-release.apk \
     --device=model=tokay,version=36,locale=en,orientation=landscape \
+    --device=model=tokay,version=36,locale=en,orientation=portrait \
     --project=standby-8589f \
     --timeout=90s
   ```
-* Download and review actual captured screenshots to ensure typography, alignment, and glassmorphism render properly on physical OLED hardware.
+* Download captured device screenshots to `/tmp/standby_screenshots_v*/` and inspect them directly.
 
-### Step 5: Independent Adversarial Auditor (Unbiased Grilling Protocol)
-To ensure the audit is never biased by implementer claims:
-1. **Isolated Red-Team Stance:** The auditor subagent is explicitly instructed to treat all implementer statements as unverified until proven by inspecting code, git diffs, AST, test logs, and physical screenshots.
-2. **5-Pillar Scorecard:**
-   * Visual Polish & Apple StandBy Fidelity (0–10)
-   * Battery & Performance / Recomposition Rate (0–10)
-   * Real Android System Telemetry (0–10)
-   * Modular Bento & Fullscreen UX (0–10)
-   * Code Architecture & Production Readiness (0–10)
-3. **Hard Gate:** If the overall score is below **9.5 / 10** or any shortcut/caveat is detected, the loop routes back to Step 2 for immediate patching.
+### Step 5: Blind Independent Auditor Protocol (Zero-Bias Grilling)
+To ensure the audit is never biased by developer claims or recycled conversations:
+1. **Fresh Blind Auditor Mandate:** For every new audit cycle, spawn a **brand-new independent subagent** (`independent_code_auditor`) with zero prior conversation history.
+2. **Direct Inspection Mandate:** The auditor must not be fed pre-packaged summaries. It must independently inspect the raw code, AST structure, test results, and physical device screenshots.
+3. **5-Pillar Scorecard:**
+   * Aesthetics & Visual Polish (0–10)
+   * Architecture & Code Quality (0–10)
+   * Gesture Handling & UX (0–10)
+   * Battery Efficiency & OLED Protection (0–10)
+   * Production Readiness (0–10)
+4. **Hard Gate:** If the overall score is below **9.0 / 10** or any defect/flaw is found, the loop routes back to Step 2 for immediate patching.
 
-### Step 6: Automated Google Play Rollout
-* Once approved by the auditor, upload the signed release bundle directly to the Google Play Console `internal` testing track:
+### Step 6: Automated Google Play Rollout & Git Sync
+* Upload the signed release bundle directly to the Google Play Console `internal` testing track:
   ```bash
-  /Users/lap16030-local/.local/bin/uv run \
-    --with google-api-python-client --with google-auth \
-    python scripts/play_upload_internal.py
+  /Users/lap16030-local/Documents/Projects/my-moves-signing/.venv/bin/python scripts/play_upload_internal.py
+  ```
+* Commit and push all changes to GitHub `main`:
+  ```bash
+  git add -A && git commit -m "..." && git push origin main
   ```
 
 ---
@@ -121,18 +133,5 @@ macOS Privacy & Security (TCC) restricts terminal processes from accessing files
    * Toggle **ON** for **Ghostty** (or your active terminal app).
    * Alternatively: **System Settings** > **Privacy & Security** > **Files and Folders** > ensure **Documents Folder** is permitted.
 
-2. **Copy Signing Key to Project Root:**
-   In Finder or an authorized terminal, copy the upload keystore directly into the repository root (both files are excluded from Git via `.gitignore`):
-   ```bash
-   cp ~/Documents/Projects/my-moves-signing/keystore.properties \
-      ~/Documents/Projects/my-moves-signing/my-moves-upload.jks \
-      ~/Documents/Github/standby-android/
-   ```
-
-3. **Finder Alternative (Zero Terminal Friction):**
-   * Press `Command + Space`, type `Terminal`, or run:
-     ```bash
-     open ~/Documents/Projects/my-moves-signing
-     open ~/Documents/Github/standby-android
-     ```
-   * Drag `keystore.properties` and `my-moves-upload.jks` into `standby-android`.
+2. **Upload Keystore Location:**
+   The release signing keystore is stored at `~/Documents/Projects/my-moves-signing/my-moves-upload.jks` and loaded automatically via `app/build.gradle.kts`.

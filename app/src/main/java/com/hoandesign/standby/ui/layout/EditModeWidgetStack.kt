@@ -139,15 +139,18 @@ fun EditModeWidgetStack(
                                     change.consume()
                                     dragOffset += dragAmount.y
 
-                                    val itemHeight = 180.dp.toPx() + 14.dp.toPx()
-                                    val targetSwap = (dragOffset / itemHeight).toInt()
-                                    if (targetSwap != 0) {
-                                        val newIndex = (index + targetSwap).coerceIn(0, widgetIds.size - 1)
-                                        if (newIndex != index) {
-                                            haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                            onReorder(index, newIndex)
-                                            draggedIndex = newIndex
-                                            dragOffset -= targetSwap * itemHeight
+                                    val currentItemInfo = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }
+                                    val itemHeight = currentItemInfo?.size?.toFloat() ?: (180.dp.toPx() + 14.dp.toPx())
+                                    if (itemHeight > 0f) {
+                                        val targetSwap = (dragOffset / itemHeight).toInt()
+                                        if (targetSwap != 0) {
+                                            val newIndex = (index + targetSwap).coerceIn(0, widgetIds.size - 1)
+                                            if (newIndex != index) {
+                                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                                onReorder(index, newIndex)
+                                                draggedIndex = newIndex
+                                                dragOffset -= targetSwap * itemHeight
+                                            }
                                         }
                                     }
                                 }
