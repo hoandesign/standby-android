@@ -96,17 +96,22 @@ flowchart TD
   ```
 * Download captured device screenshots to `/tmp/standby_screenshots_v*/` and inspect them directly.
 
-### Step 5: Blind Independent Auditor Protocol (Zero-Bias Grilling)
-To ensure the audit is never biased by developer claims or recycled conversations:
-1. **Fresh Blind Auditor Mandate:** For every new audit cycle, spawn a **brand-new independent subagent** (`independent_code_auditor`) with zero prior conversation history.
-2. **Direct Inspection Mandate:** The auditor must not be fed pre-packaged summaries. It must independently inspect the raw code, AST structure, test results, and physical device screenshots.
-3. **5-Pillar Scorecard:**
+### Step 5: Blind Independent Auditor & Design Critic Protocol (Zero-Bias Grilling)
+To ensure the audit is never biased by developer claims or superficial checklist compliance:
+1. **Fresh Blind Auditor Mandate:** For every new audit cycle, spawn a **brand-new independent subagent** with zero prior conversation history.
+2. **Dedicated Design Critic (`design_auditor`):** In addition to code verification, a specialized **Principal Design Critic** subagent must ruthlessly audit UI/UX, typography, and visual polish like a world-class Head of Design:
+   * **Element Collisions & Dynamic Overlaps:** Check that moving hands (hour, minute, sweeping seconds) NEVER pass over or obscure static badges (alarm, date, weather, city labels).
+   * **12-Hour Sweep Simulation:** Mathematically verify that throughout a full 12-hour rotation, hands maintain optical clearance from all dials and text.
+   * **Reference Design Parity:** Compare pixel-by-pixel against Apple StandBy reference designs (e.g. horizontal midline placement for alarms/dates on horizon dials, widescreen full-bleed expansion).
+   * **Typography & Optical Margins:** Verify tight negative tracking (`-0.03em` to `-0.05em`), minimum 8–12dp breathing room between all glyphs and boundaries, and zero raw OS emojis on bespoke hardware clock dials.
+3. **Direct Inspection Mandate:** The auditor must not be fed pre-packaged summaries. It must independently inspect raw screenshots and code.
+4. **5-Pillar Scorecard:**
    * Aesthetics & Visual Polish (0–10)
    * Architecture & Code Quality (0–10)
    * Gesture Handling & UX (0–10)
    * Battery Efficiency & OLED Protection (0–10)
    * Production Readiness (0–10)
-4. **Hard Gate:** If the overall score is below **9.0 / 10** or any defect/flaw is found, the loop routes back to Step 2 for immediate patching.
+5. **Hard Gate:** If the overall score is below **9.5 / 10** or ANY visual collision/defect is found, the loop routes back to Step 2 for immediate patching.
 
 ### Step 6: Automated Google Play Rollout & Git Sync
 * Upload the signed release bundle directly to the Google Play Console `internal` testing track:

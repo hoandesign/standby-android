@@ -58,6 +58,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.hoandesign.standby.model.TemperatureUnit
 import com.hoandesign.standby.model.NightModePreference
 import com.hoandesign.standby.model.NightModeState
 import com.hoandesign.standby.model.StandbyWidgetId
@@ -132,7 +133,16 @@ fun MainStandbyScreen(
     var currentNightModeState by remember(nightModeState) { mutableStateOf(nightModeState) }
     var currentAccentColor by remember(accentColor) { mutableStateOf(accentColor) }
     var currentAutoLaunch by remember(autoLaunchOnDock) { mutableStateOf(autoLaunchOnDock) }
+    var currentTemperatureUnit by remember {
+        val raw = prefs.getString("pref_temp_unit", "C")
+        mutableStateOf(if (raw == "F") TemperatureUnit.FAHRENHEIT else TemperatureUnit.CELSIUS)
+    }
     var showQuickSettings by remember { mutableStateOf(false) }
+
+    fun persistTemperatureUnit(newUnit: TemperatureUnit) {
+        currentTemperatureUnit = newUnit
+        prefs.edit().putString("pref_temp_unit", if (newUnit == TemperatureUnit.FAHRENHEIT) "F" else "C").apply()
+    }
 
     // Dynamic Bento Slot State (persisted to SharedPreferences)
     var leftSlotWidgetIds by remember {
@@ -210,7 +220,8 @@ fun MainStandbyScreen(
 
     StandByTheme(
         isNightMode = currentNightModeState.isNightModeActive,
-        accentColor = currentAccentColor
+        accentColor = currentAccentColor,
+        temperatureUnit = currentTemperatureUnit
     ) {
         NightModeFilterContainer(
             isNightMode = currentNightModeState.isNightModeActive,
@@ -281,6 +292,10 @@ fun MainStandbyScreen(
                             currentAccentColor = color
                             onAccentColorChange?.invoke(color)
                         },
+                        temperatureUnit = currentTemperatureUnit,
+                        onTemperatureUnitChange = { unit ->
+                            persistTemperatureUnit(unit)
+                        },
                         autoLaunchOnDock = currentAutoLaunch,
                         onAutoLaunchChange = { enabled ->
                             currentAutoLaunch = enabled
@@ -342,6 +357,8 @@ private fun QuickSettingsModal(
     onNightModePreferenceChange: (NightModePreference) -> Unit,
     accentColor: Color,
     onAccentColorSelect: (Color) -> Unit,
+    temperatureUnit: TemperatureUnit,
+    onTemperatureUnitChange: (TemperatureUnit) -> Unit,
     autoLaunchOnDock: Boolean,
     onAutoLaunchChange: (Boolean) -> Unit,
     onCustomizeSlots: () -> Unit,
@@ -628,6 +645,52 @@ private fun QuickSettingsModal(
                             .height(1.dp)
                             .background(StandbyBorder)
                     )
+
+                    // Temperature Unit Section (°C vs °F)
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "TEMPERATURE UNIT",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val units = listOf(
+                                Pair(TemperatureUnit.CELSIUS, "Celsius (°C)"),
+                                Pair(TemperatureUnit.FAHRENHEIT, "Fahrenheit (°F)")
+                            )
+
+                            units.forEach { (unit, label) ->
+                                val isSelected = temperatureUnit == unit
+                                val optionBg = if (isSelected) accentColor.copy(alpha = 0.2f) else StandbyCardBg
+                                val optionBorder = if (isSelected) accentColor else StandbyBorder
+                                val optionTextColor = if (isSelected) accentColor else TextSecondary
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(40.dp)
+                                        .background(optionBg, RoundedCornerShape(12.dp))
+                                        .border(1.dp, optionBorder, RoundedCornerShape(12.dp))
+                                        .clickable { onTemperatureUnitChange(unit) },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        color = optionTextColor,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            }
+                        }
+                    }
 
                     // Accent Color Section
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

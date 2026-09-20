@@ -56,11 +56,13 @@ enum class StandbyWidgetId(
     SYSTEM_BENTO("System Specs", "System", "Real-time RAM, storage, CPU telemetry and thermal gauge"),
     DESK_TIMER("Desk Timer", "Productivity", "Pomodoro countdown ring and focus interval presets"),
     VIBES("Ambient Vibes", "Media", "Lo-fi rain, vinyl crackle and sound generator"),
-    PHOTO_FRAME("Photo Frame", "Media", "Curated ambient photography with subtle ken-burns motion");
+    PHOTO_FRAME("Photo Frame", "Media", "Curated ambient photography with subtle ken-burns motion"),
+    RECTANGLE_CLOCK("Rectangle Clock", "Clock", "Architectural rectangular dial maximizing screen real estate");
 
     val icon: ImageVector
         get() = when (this) {
             ANALOG_CLOCK -> Icons.Default.AccessTime
+            RECTANGLE_CLOCK -> Icons.Default.AccessTime
             BIG_DIGITAL_CLOCK -> Icons.Default.Schedule
             RETRO_FLIP_CLOCK -> Icons.Default.AccessTime
             RADIAL_CLOCK -> Icons.Default.AccessTime
@@ -80,7 +82,7 @@ enum class StandbyWidgetId(
 object StandbyWidgetRegistry {
     val allWidgets: List<StandbyWidgetId> = StandbyWidgetId.entries
     val defaultLeftSlot: List<StandbyWidgetId> = listOf(
-        StandbyWidgetId.ANALOG_CLOCK, StandbyWidgetId.BIG_DIGITAL_CLOCK, StandbyWidgetId.WEATHER,
+        StandbyWidgetId.ANALOG_CLOCK, StandbyWidgetId.RECTANGLE_CLOCK, StandbyWidgetId.BIG_DIGITAL_CLOCK, StandbyWidgetId.WEATHER,
         StandbyWidgetId.RETRO_FLIP_CLOCK, StandbyWidgetId.SOLAR_ARC_CLOCK, StandbyWidgetId.RADIAL_CLOCK
     )
     val defaultRightSlot: List<StandbyWidgetId> = listOf(
@@ -102,6 +104,7 @@ object StandbyWidgetRegistry {
     @Composable
     fun RenderCompact(widgetId: StandbyWidgetId, accentColor: Color, modifier: Modifier = Modifier) {
         when (widgetId) {
+            StandbyWidgetId.RECTANGLE_CLOCK -> com.hoandesign.standby.ui.widgets.clock.RectangleAnalogClockWidget(accentColor = accentColor, modifier = modifier)
             StandbyWidgetId.ANALOG_CLOCK -> AnalogClockWidget(modifier = modifier)
             StandbyWidgetId.BIG_DIGITAL_CLOCK -> BigDigitalClockWidget(accentColor = accentColor, modifier = modifier)
             StandbyWidgetId.RETRO_FLIP_CLOCK -> RetroFlipClockWidget(accentColor = accentColor, modifier = modifier)
@@ -122,6 +125,7 @@ object StandbyWidgetRegistry {
     @Composable
     fun RenderFullscreen(widgetId: StandbyWidgetId, accentColor: Color, modifier: Modifier = Modifier) {
         when (widgetId) {
+            StandbyWidgetId.RECTANGLE_CLOCK -> com.hoandesign.standby.ui.widgets.clock.RectangleAnalogClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
             StandbyWidgetId.ANALOG_CLOCK -> AnalogClockWidget(modifier = modifier.fillMaxSize().padding(16.dp))
             StandbyWidgetId.BIG_DIGITAL_CLOCK -> BigDigitalClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
             StandbyWidgetId.RETRO_FLIP_CLOCK -> RetroFlipClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
@@ -199,6 +203,9 @@ fun FullscreenWeather(
         repository.weatherFlow(currentLat, currentLon, currentCity)
     }
     val weather by weatherFlow.collectAsState(initial = repository.getCachedWeather())
+
+    val tempUnit = com.hoandesign.standby.ui.theme.StandbyTheme.temperatureUnit
+    val isCelsius = tempUnit == com.hoandesign.standby.model.TemperatureUnit.CELSIUS
 
     BoxWithConstraints(
         modifier = modifier
@@ -279,15 +286,19 @@ fun FullscreenWeather(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Bottom
                     ) {
+                        val displayTemp = if (isCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"
+                        val highDisplay = if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
+                        val lowDisplay = if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
+
                         Text(
-                            text = "${weather.tempFahrenheit}°",
+                            text = displayTemp,
                             fontSize = 68.sp,
                             fontWeight = FontWeight.Black,
                             color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
                             letterSpacing = (-0.03).em
                         )
                         Text(
-                            text = "H: ${weather.highTemp}°  L: ${weather.lowTemp}°",
+                            text = "H: $highDisplay  L: $lowDisplay",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNightMode) Color(0xAAFF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
@@ -320,9 +331,10 @@ fun FullscreenWeather(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(4.dp)
                                 ) {
+                                    val hourDisplay = if (isCelsius) "${hour.tempCelsius}°" else "${hour.tempFahrenheit}°"
                                     Text(hour.timeLabel, fontSize = 11.sp, color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary)
                                     Text(hour.conditionEmoji, fontSize = 18.sp)
-                                    Text("${hour.tempFahrenheit}°", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                    Text(hourDisplay, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                                 }
                             }
                         }
@@ -341,6 +353,8 @@ fun FullscreenWeather(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         weather.dailyForecast.take(5).forEach { day ->
+                            val dLow = if (isCelsius) "${day.lowTempCelsius}°" else "${day.lowTempFahrenheit}°"
+                            val dHigh = if (isCelsius) "${day.highTempCelsius}°" else "${day.highTempFahrenheit}°"
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -348,8 +362,8 @@ fun FullscreenWeather(
                             ) {
                                 Text(day.dayLabel, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = if (isNightMode) Color(0xCCFF453A) else Color.White, modifier = Modifier.width(50.dp))
                                 Text(day.conditionEmoji, fontSize = 16.sp)
-                                Text("L: ${day.lowTempFahrenheit}°", fontSize = 12.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
-                                Text("H: ${day.highTempFahrenheit}°", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                Text("L: $dLow", fontSize = 12.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
+                                Text("H: $dHigh", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                             }
                         }
                     }
@@ -378,8 +392,9 @@ fun FullscreenWeather(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
+                        val currentTempDisplay = if (weather.cityName == "Location Needed") "--°" else (if (isCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°")
                         Text(
-                            text = if (weather.cityName == "Location Needed") "--°" else "${weather.tempFahrenheit}°",
+                            text = currentTempDisplay,
                             fontSize = 80.sp,
                             fontWeight = FontWeight.Black,
                             color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
@@ -387,8 +402,10 @@ fun FullscreenWeather(
                         )
                         Text(if (weather.cityName == "Location Needed") "⛅" else weather.iconEmoji, fontSize = 54.sp)
                     }
+                    val lHigh = if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
+                    val lLow = if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
                     Text(
-                        text = if (weather.condition == "Location Needed") "Tap to refresh" else "${weather.condition}  ·  H: ${weather.highTemp}°  L: ${weather.lowTemp}°",
+                        text = if (weather.condition == "Location Needed") "Tap to refresh" else "${weather.condition}  ·  H: $lHigh  L: $lLow",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary
@@ -407,6 +424,7 @@ fun FullscreenWeather(
                         ) {
                             items(weather.hourlyForecast.size) { i ->
                                 val hour = weather.hourlyForecast[i]
+                                val hourDisplay = if (isCelsius) "${hour.tempCelsius}°" else "${hour.tempFahrenheit}°"
                                 Column(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
@@ -418,7 +436,7 @@ fun FullscreenWeather(
                                 ) {
                                     Text(hour.timeLabel, fontSize = 10.sp, color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary)
                                     Text(hour.conditionEmoji, fontSize = 16.sp)
-                                    Text("${hour.tempFahrenheit}°", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                    Text(hourDisplay, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                                 }
                             }
                         }
@@ -436,6 +454,8 @@ fun FullscreenWeather(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             weather.dailyForecast.take(4).forEach { day ->
+                                val dLow = if (isCelsius) "${day.lowTempCelsius}°" else "${day.lowTempFahrenheit}°"
+                                val dHigh = if (isCelsius) "${day.highTempCelsius}°" else "${day.highTempFahrenheit}°"
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -443,8 +463,8 @@ fun FullscreenWeather(
                                 ) {
                                     Text(day.dayLabel, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = if (isNightMode) Color(0xCCFF453A) else Color.White, modifier = Modifier.width(45.dp))
                                     Text(day.conditionEmoji, fontSize = 14.sp)
-                                    Text("L: ${day.lowTempFahrenheit}°", fontSize = 11.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
-                                    Text("H: ${day.highTempFahrenheit}°", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                    Text("L: $dLow", fontSize = 11.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
+                                    Text("H: $dHigh", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                                 }
                             }
                         }

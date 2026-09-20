@@ -19,6 +19,11 @@ val LocalNightMode = compositionLocalOf { false }
 val LocalAccentColor = compositionLocalOf { AccentOrange }
 
 /**
+ * Composition local providing the active temperature unit (°C vs °F).
+ */
+val LocalTemperatureUnit = compositionLocalOf { com.hoandesign.standby.model.TemperatureUnit.CELSIUS }
+
+/**
  * Base Material 3 dark color scheme tuned for pitch-black OLED displays.
  */
 private val StandbyBaseDarkColorScheme = darkColorScheme(
@@ -48,6 +53,7 @@ private val StandbyBaseDarkColorScheme = darkColorScheme(
 fun StandByTheme(
     isNightMode: Boolean = false,
     accentColor: Color = AccentOrange,
+    temperatureUnit: com.hoandesign.standby.model.TemperatureUnit = com.hoandesign.standby.model.TemperatureUnit.CELSIUS,
     content: @Composable () -> Unit
 ) {
     val activeAccent = if (isNightMode) NightRed else accentColor
@@ -60,6 +66,7 @@ fun StandByTheme(
     CompositionLocalProvider(
         LocalNightMode provides isNightMode,
         LocalAccentColor provides activeAccent,
+        LocalTemperatureUnit provides temperatureUnit,
         LocalStandbyTypography provides StandbyTypography()
     ) {
         MaterialTheme(
@@ -77,11 +84,13 @@ fun StandByTheme(
 fun StandByTheme(
     nightModeState: NightModeState,
     accentColor: Color = AccentOrange,
+    temperatureUnit: com.hoandesign.standby.model.TemperatureUnit = com.hoandesign.standby.model.TemperatureUnit.CELSIUS,
     content: @Composable () -> Unit
 ) {
     StandByTheme(
         isNightMode = nightModeState.isNightModeActive,
         accentColor = accentColor,
+        temperatureUnit = temperatureUnit,
         content = content
     )
 }
@@ -97,6 +106,10 @@ object StandbyTheme {
     val accentColor: Color
         @Composable
         get() = LocalAccentColor.current
+
+    val temperatureUnit: com.hoandesign.standby.model.TemperatureUnit
+        @Composable
+        get() = LocalTemperatureUnit.current
 
     val typography: StandbyTypography
         @Composable

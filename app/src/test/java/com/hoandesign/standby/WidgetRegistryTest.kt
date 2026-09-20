@@ -11,10 +11,11 @@ class WidgetRegistryTest {
 
     @Test
     fun testAllFourteenWidgetsRegistered() {
-        assertEquals("Must have exactly 14 modular widgets", 14, StandbyWidgetRegistry.allWidgets.size)
+        assertEquals("Must have exactly 15 modular widgets", 15, StandbyWidgetRegistry.allWidgets.size)
 
         val ids = StandbyWidgetRegistry.allWidgets.toSet()
         assertTrue(ids.contains(StandbyWidgetId.ANALOG_CLOCK))
+        assertTrue(ids.contains(StandbyWidgetId.RECTANGLE_CLOCK))
         assertTrue(ids.contains(StandbyWidgetId.BIG_DIGITAL_CLOCK))
         assertTrue(ids.contains(StandbyWidgetId.RETRO_FLIP_CLOCK))
         assertTrue(ids.contains(StandbyWidgetId.RADIAL_CLOCK))

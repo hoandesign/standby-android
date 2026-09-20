@@ -132,7 +132,10 @@ fun WeatherWidget(
     val observedState by weatherFlow.collectAsState(initial = repository.getCachedWeather())
     val weather = initialWeather ?: observedState
 
-    var showCelsius by remember { mutableStateOf(false) }
+    val tempPreference = StandbyTheme.temperatureUnit
+    var overrideUnit by remember { mutableStateOf<com.hoandesign.standby.model.TemperatureUnit?>(null) }
+    val effectiveUnit = overrideUnit ?: tempPreference
+    val showCelsius = effectiveUnit == com.hoandesign.standby.model.TemperatureUnit.CELSIUS
     val isNightMode = StandbyTheme.isNightMode
 
     BoxWithConstraints(
@@ -148,14 +151,7 @@ fun WeatherWidget(
                         )
                     )
                 } else {
-                    showCelsius = !showCelsius
-                    coroutineScope.launch {
-                        val lat = currentLat
-                        val lon = currentLon
-                        if (lat != null && lon != null) {
-                            repository.fetchWeather(lat, lon, currentCity)
-                        }
-                    }
+                    overrideUnit = if (showCelsius) com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS
                 }
             }
             .padding(14.dp)

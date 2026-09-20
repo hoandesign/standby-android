@@ -42,23 +42,30 @@ class WidgetScreenshotTest {
     @get:Rule
     val composeTestRule = createAndroidComposeRule<ComponentActivity>()
 
-    private fun getOutputDirectory(): File {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val dir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "standby_widget_catalog")
-        if (!dir.exists()) {
-            dir.mkdirs()
-        }
-        return dir
-    }
-
     private fun saveBitmap(bitmap: Bitmap, filename: String): File {
-        val dir = getOutputDirectory()
-        val file = File(dir, filename)
-        FileOutputStream(file).use { out ->
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val primaryDir = File(context.getExternalFilesDir(Environment.DIRECTORY_PICTURES), "standby_widget_catalog")
+        if (!primaryDir.exists()) primaryDir.mkdirs()
+
+        val primaryFile = File(primaryDir, filename)
+        FileOutputStream(primaryFile).use { out ->
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
         }
-        Log.i("WidgetScreenshotTest", "Saved screenshot: ${file.absolutePath} (${file.length()} bytes)")
-        return file
+        Log.i("WidgetScreenshotTest", "Saved screenshot: ${primaryFile.absolutePath} (${primaryFile.length()} bytes)")
+
+        // Also duplicate to root /sdcard/standby_widget_catalog for reliable Firebase Test Lab pulling
+        try {
+            val sdcardDir = File("/sdcard/standby_widget_catalog")
+            if (!sdcardDir.exists()) sdcardDir.mkdirs()
+            val sdcardFile = File(sdcardDir, filename)
+            FileOutputStream(sdcardFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+        } catch (e: Exception) {
+            Log.w("WidgetScreenshotTest", "Fallback /sdcard/standby_widget_catalog write failed: ${e.message}")
+        }
+
+        return primaryFile
     }
 
     @Test

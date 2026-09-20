@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,26 +24,35 @@ import com.hoandesign.standby.ui.theme.StandbyBorder
 import com.hoandesign.standby.ui.theme.StandbyCardBg
 
 /**
- * Reusable container for StandBy cards, styled with [StandbyCardBg], hairline [StandbyBorder],
- * and smooth rounded corners.
+ * Reusable container for StandBy cards.
+ * In Borderless Bento mode (default), modules float borderless on pure OLED black,
+ * exactly matching Apple StandBy hardware presentation.
  */
 @Composable
 fun StandbyCardContainer(
     modifier: Modifier = Modifier,
     cornerRadius: Dp = 24.dp,
     contentAlignment: Alignment = Alignment.Center,
+    borderless: Boolean = true,
     content: @Composable BoxScope.() -> Unit
 ) {
     val shape = RoundedCornerShape(cornerRadius)
-    Box(
-        modifier = modifier
+    val containerModifier = if (borderless) {
+        modifier
+            .clip(shape)
+            .background(Color.Transparent)
+    } else {
+        modifier
             .clip(shape)
             .background(StandbyCardBg)
             .border(
                 width = 1.dp,
                 color = StandbyBorder,
                 shape = shape
-            ),
+            )
+    }
+    Box(
+        modifier = containerModifier,
         contentAlignment = contentAlignment
     ) {
         content()

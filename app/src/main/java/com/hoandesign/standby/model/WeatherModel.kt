@@ -3,6 +3,14 @@ package com.hoandesign.standby.model
 import kotlin.math.roundToInt
 
 /**
+ * Temperature display preference.
+ */
+enum class TemperatureUnit(val symbol: String, val label: String) {
+    CELSIUS("°C", "Celsius"),
+    FAHRENHEIT("°F", "Fahrenheit")
+}
+
+/**
  * Immutable state representing current and daily weather metrics.
  *
  * @param tempCelsius Current temperature in degrees Celsius.
