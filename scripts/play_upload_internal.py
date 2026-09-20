@@ -30,8 +30,16 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
 DEFAULT_AAB = PROJECT_ROOT / "app/build/outputs/bundle/release/app-release.aab"
 
-SERVICE_ACCOUNT_FILE = Path.home() / (
-    "Documents/Projects/my-moves-signing/play-service-account.json"
+import os
+
+SERVICE_ACCOUNT_FILE = (
+    Path(os.environ["PLAY_SERVICE_ACCOUNT_KEY"])
+    if os.environ.get("PLAY_SERVICE_ACCOUNT_KEY") and Path(os.environ["PLAY_SERVICE_ACCOUNT_KEY"]).is_file()
+    else (
+        Path("/tmp/play-service-account.json")
+        if Path("/tmp/play-service-account.json").is_file()
+        else Path.home() / "Documents/Projects/my-moves-signing/play-service-account.json"
+    )
 )
 
 
