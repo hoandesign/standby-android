@@ -39,6 +39,17 @@ data class DailyForecast(
     val conditionEmoji: String
 )
 
+object WeatherDefaults {
+    const val DEFAULT_CITY = "Cupertino"
+    const val DEFAULT_CONDITION = "Sunny"
+    const val DEFAULT_TEMP_C = 24
+    const val DEFAULT_TEMP_F = 63
+    const val DEFAULT_HIGH_C = 32
+    const val DEFAULT_HIGH_F = 91
+    const val DEFAULT_LOW_C = 22
+    const val DEFAULT_LOW_F = 62
+}
+
 data class WeatherState(
     val tempCelsius: Int = 0,
     val tempFahrenheit: Int = 0,
@@ -49,6 +60,7 @@ data class WeatherState(
     val aqi: Int = 0,
     val precipitationChance: Int = 0,
     val cityName: String = "Location Needed",
+    val isLive: Boolean = false,
     val hourlyForecast: List<HourlyForecast> = emptyList(),
     val dailyForecast: List<DailyForecast> = emptyList()
 )

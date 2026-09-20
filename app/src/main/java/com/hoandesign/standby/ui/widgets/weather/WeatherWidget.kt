@@ -150,21 +150,25 @@ fun WeatherWidget(
         val conditionFontSize = if (h < 150.dp) 15.sp else 19.sp
         val rangeFontSize = if (h < 150.dp) 13.sp else 16.sp
 
-        val hasLiveHighLow = hasLocationPerm && weather.cityName != "Location Needed" && weather.highTemp != 0 && weather.lowTemp != 0
+        val hasLiveHighLow = hasLocationPerm && weather.isLive
         val highVal = if (!hasLiveHighLow) {
-            if (showCelsius) "32" else "91"
+            if (showCelsius) com.hoandesign.standby.model.WeatherDefaults.DEFAULT_HIGH_C.toString() else com.hoandesign.standby.model.WeatherDefaults.DEFAULT_HIGH_F.toString()
         } else {
             if (showCelsius) ((weather.highTemp - 32) * 5 / 9).toString() else weather.highTemp.toString()
         }
         val lowVal = if (!hasLiveHighLow) {
-            if (showCelsius) "22" else "62"
+            if (showCelsius) com.hoandesign.standby.model.WeatherDefaults.DEFAULT_LOW_C.toString() else com.hoandesign.standby.model.WeatherDefaults.DEFAULT_LOW_F.toString()
         } else {
             if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString()
         }
 
-        val displayCity = if (!hasLocationPerm) "Location Access" else if (weather.cityName == "Location Needed") "Cupertino" else weather.cityName
-        val displayTemp = if (!hasLocationPerm || weather.cityName == "Location Needed") (if (showCelsius) "24°" else "63°") else (if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°")
-        val displayCondition = if (!hasLocationPerm || weather.condition == "Location Needed") "Sunny" else weather.condition
+        val displayCity = if (!hasLocationPerm) "Location Access" else if (!weather.isLive) com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CITY else weather.cityName
+        val displayTemp = if (!hasLocationPerm || !weather.isLive) {
+            if (showCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_F}°"
+        } else {
+            if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"
+        }
+        val displayCondition = if (!hasLocationPerm || !weather.isLive) com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CONDITION else weather.condition
 
         Column(
             modifier = Modifier.fillMaxWidth(),
@@ -193,6 +197,8 @@ fun WeatherWidget(
             ) { temp ->
                 Text(
                     text = temp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     style = TextStyle(
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight.Bold,
@@ -230,6 +236,8 @@ fun WeatherWidget(
             // 5. Daily Range (e.g. H:91° L:62°)
             Text(
                 text = "H:$highVal° L:$lowVal°",
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Normal,

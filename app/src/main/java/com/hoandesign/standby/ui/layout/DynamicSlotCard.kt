@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.hoandesign.standby.model.StandbyWidgetId
 import com.hoandesign.standby.model.StandbyWidgetRegistry
-import com.hoandesign.standby.ui.components.HorizontalPagerIndicator
+import com.hoandesign.standby.ui.components.VerticalPagerIndicator
 
 /**
  * Dynamic Bento slot card with vertical pagination across configured widgets,
@@ -89,25 +89,21 @@ fun DynamicSlotCard(
             }
         }
 
-        // Top-aligned slot stack indicator (floating overlay, auto-hiding with navigation or active swipe)
+        // Side-aligned vertical stack indicator (zero-footprint floating overlay, auto-hiding with navigation or active swipe)
         val showSlotIndicator = widgetIds.size > 1 && !isEditMode && (isIndicatorVisible || pagerState.isScrollInProgress)
         AnimatedVisibility(
             visible = showSlotIndicator,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 10.dp)
-                .zIndex(10f)
+                .align(Alignment.CenterEnd)
+                .padding(end = 8.dp)
+                .zIndex(15f)
         ) {
-            HorizontalPagerIndicator(
+            VerticalPagerIndicator(
                 pageCount = widgetIds.size,
                 currentPage = pagerState.currentPage.coerceIn(0, widgetIds.size - 1),
-                indicatorHeight = 4.dp,
-                activeWidth = 12.dp,
-                inactiveWidth = 4.dp,
-                spacing = 4.dp,
-                inactiveColor = Color.White.copy(alpha = 0.25f)
+                hasBackdrop = true
             )
         }
     }

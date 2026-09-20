@@ -22,17 +22,7 @@ import kotlin.math.roundToInt
 class WeatherRepository {
 
     companion object {
-        val DEFAULT_WEATHER = WeatherState(
-            tempCelsius = 0,
-            tempFahrenheit = 0,
-            condition = "Location Needed",
-            iconEmoji = "location",
-            highTemp = 0,
-            lowTemp = 0,
-            aqi = 0,
-            precipitationChance = 0,
-            cityName = "Location Needed"
-        )
+        val DEFAULT_WEATHER = WeatherState(isLive = false)
     }
 
     @Volatile
@@ -172,6 +162,7 @@ class WeatherRepository {
                         aqi = cachedWeather.aqi,
                         precipitationChance = precipitation,
                         cityName = cityName,
+                        isLive = true,
                         hourlyForecast = hourlyList,
                         dailyForecast = dailyList
                     )

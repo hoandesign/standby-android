@@ -16,7 +16,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.text.TextStyle
@@ -38,17 +37,22 @@ import kotlinx.coroutines.isActive
 import java.util.Calendar
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.pow
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 /**
- * Authentic Apple iOS StandBy Squircle Analog Clock Widget.
+ * Authentic Apple iOS StandBy Rounded-Rectangle Analog Clock Widget.
  *
- * Implements continuous-curvature superellipse geometry (|x/a|^n + |y/b|^n = 1),
- * subtle perimeter minute ticks, 12 inward radial index rays, bold cardinal
- * numerals (12, 3, 6, 9), white rounded baton hands, and a hollow orange pinion hub.
- * Floats borderless on pure OLED black (#000000).
+ * Fills the full width and height of the container, utilizing a modern rounded
+ * rectangle dial with subtle corner curvature. Features:
+ * - 60 perimeter ticks following the rounded-rectangle track (perpendicular to straight edges).
+ * - 8 long inward radial hour rays pointing directly toward the center hub.
+ * - Bold cardinal numerals (12, 3, 6, 9) with ample breathing space.
+ * - White rounded baton hands with depth shadows.
+ * - Iconic Apple StandBy orange second needle with hollow pinion hub.
+ * - Floats borderless on pure OLED pitch-black (#000000).
  */
 @Composable
 fun RectangleAnalogClockWidget(
@@ -89,85 +93,97 @@ fun RectangleAnalogClockWidget(
             .fillMaxSize()
             .background(dialBg)
     ) {
-        val availableWidth = constraints.maxWidth.toFloat()
-        val availableHeight = constraints.maxHeight.toFloat()
-
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
             val center = Offset(w / 2f, h / 2f)
 
-            // Symmetrical square bounding box for squircle
-            val side = min(w, h)
-            val padding = 16.dp.toPx()
-            val baseRadius = (side / 2f) - padding
+            // Full-bleed utilization: uses available width and height with a tight 8dp optical margin
+            val padding = 8.dp.toPx()
+            val halfW = (w / 2f) - padding
+            val halfH = (h / 2f) - padding
 
-            val squircleExponent = 4.2f
+            if (halfW <= 20f || halfH <= 20f) return@Canvas
 
-            // 1. Draw 60 Subtle Perimeter Minute Ticks along Squircle Track
+            val minDim = min(halfW, halfH)
+            // Tighter corner radius for modern rectangle geometry
+            val cornerRadius = (minDim * 0.12f).coerceIn(12.dp.toPx(), 32.dp.toPx())
+
+            // 1. Draw 60 Perimeter Minute Ticks along the Rounded Rectangle Track
             for (i in 0 until 60) {
                 val isHour = i % 5 == 0
                 val angleDeg = i * 6.0
                 val angleRad = Math.toRadians(angleDeg - 90.0)
-                val cosA = cos(angleRad).toFloat()
-                val sinA = sin(angleRad).toFloat()
 
-                val rOuter = rSquircle(angleRad, baseRadius, squircleExponent)
-                val tickLen = if (isHour) 9.dp.toPx() else 5.dp.toPx()
+                val bp = intersectRoundedRect(angleRad, halfW, halfH, cornerRadius, center)
+                val tickLen = if (isHour) 8.5.dp.toPx() else 4.5.dp.toPx()
                 val tickStroke = if (isHour) 1.6.dp.toPx() else 1.0.dp.toPx()
                 val tickColor = if (isHour) primaryColor.copy(alpha = 0.85f) else secondaryColor
 
-                val outerX = center.x + rOuter * cosA
-                val outerY = center.y + rOuter * sinA
-                val innerX = center.x + (rOuter - tickLen) * cosA
-                val innerY = center.y + (rOuter - tickLen) * sinA
+                val outer = bp.point
+                val inner = Offset(
+                    outer.x + bp.normal.x * tickLen,
+                    outer.y + bp.normal.y * tickLen
+                )
 
                 drawLine(
                     color = tickColor,
-                    start = Offset(innerX, innerY),
-                    end = Offset(outerX, outerY),
+                    start = inner,
+                    end = outer,
                     strokeWidth = tickStroke,
                     cap = StrokeCap.Round
                 )
             }
 
-            // 2. Draw 12 Major Inward Radial Rays
-            // Cardinal directions (0, 15, 30, 45 -> 12, 3, 6, 9) have short outer anchor rays
-            // Non-cardinal directions (1, 2, 4, 5, 7, 8, 10, 11) have long prominent radial rays
+            // 2. Draw 12 Major Hour Markers
+            // Non-cardinal hours (1, 2, 4, 5, 7, 8, 10, 11) have long prominent radial rays
+            // pointing directly toward the center hub.
+            // Cardinal hours (0=12, 3=3, 6=6, 9=9) have outer anchor ticks.
             for (hourIndex in 0 until 12) {
                 val isCardinal = hourIndex % 3 == 0 // 0=12, 3=3, 6=6, 9=9
                 val angleDeg = hourIndex * 30.0
                 val angleRad = Math.toRadians(angleDeg - 90.0)
-                val cosA = cos(angleRad).toFloat()
-                val sinA = sin(angleRad).toFloat()
 
-                val rOuter = rSquircle(angleRad, baseRadius, squircleExponent)
+                val bp = intersectRoundedRect(angleRad, halfW, halfH, cornerRadius, center)
 
                 if (isCardinal) {
-                    // Short outer anchor ray at cardinal positions (refined to 10dp for breathing space)
-                    val rayLen = 10.dp.toPx()
+                    // Refined anchor tick at cardinal positions
+                    val rayLen = 9.dp.toPx()
+                    val outer = bp.point
+                    val inner = Offset(
+                        outer.x + bp.normal.x * rayLen,
+                        outer.y + bp.normal.y * rayLen
+                    )
                     drawLine(
                         color = primaryColor,
-                        start = Offset(center.x + (rOuter - rayLen) * cosA, center.y + (rOuter - rayLen) * sinA),
-                        end = Offset(center.x + rOuter * cosA, center.y + rOuter * sinA),
-                        strokeWidth = 2.5.dp.toPx(),
+                        start = inner,
+                        end = outer,
+                        strokeWidth = 2.4.dp.toPx(),
                         cap = StrokeCap.Round
                     )
                 } else {
-                    // Long, authoritative radial ray pointing inward towards center
-                    val rayLen = baseRadius * 0.35f
-                    drawLine(
-                        color = primaryColor,
-                        start = Offset(center.x + (rOuter - rayLen) * cosA, center.y + (rOuter - rayLen) * sinA),
-                        end = Offset(center.x + rOuter * cosA, center.y + rOuter * sinA),
-                        strokeWidth = 2.6.dp.toPx(),
-                        cap = StrokeCap.Round
-                    )
+                    // Long prominent radial ray pointing directly toward the center hub
+                    val toCenter = Offset(center.x - bp.point.x, center.y - bp.point.y)
+                    val dist = sqrt(toCenter.x * toCenter.x + toCenter.y * toCenter.y)
+                    if (dist > 1e-3f) {
+                        val dir = Offset(toCenter.x / dist, toCenter.y / dist)
+                        val rayLen = minDim * 0.36f
+                        val rayStart = bp.point
+                        val rayEnd = Offset(bp.point.x + dir.x * rayLen, bp.point.y + dir.y * rayLen)
+
+                        drawLine(
+                            color = primaryColor,
+                            start = rayStart,
+                            end = rayEnd,
+                            strokeWidth = 2.4.dp.toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    }
                 }
             }
 
             // 3. Draw Bold Geometric Cardinal Numerals (12, 3, 6, 9)
-            val numFontSize = (baseRadius * 0.30f).coerceIn(20f, 64f).sp
+            val numFontSize = (minDim * 0.32f).coerceIn(22f, 66f).sp
             val numStyle = TextStyle(
                 fontFamily = FontFamily.Default,
                 fontWeight = FontWeight.Bold,
@@ -175,42 +191,51 @@ fun RectangleAnalogClockWidget(
                 color = primaryColor
             )
 
-            val numeralOffset = (baseRadius * 0.16f).coerceIn(18.dp.toPx(), 28.dp.toPx())
+            val numeralSpacing = (minDim * 0.12f).coerceIn(12.dp.toPx(), 24.dp.toPx())
 
             // "12" Top
             val m12 = textMeasurer.measure("12", style = numStyle)
-            val r12 = rSquircle(Math.toRadians(-90.0), baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m12,
-                topLeft = Offset(center.x - m12.size.width / 2f, center.y - r12 + numeralOffset)
+                topLeft = Offset(
+                    center.x - m12.size.width / 2f,
+                    center.y - halfH + numeralSpacing
+                )
             )
 
             // "6" Bottom
             val m6 = textMeasurer.measure("6", style = numStyle)
-            val r6 = rSquircle(Math.toRadians(90.0), baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m6,
-                topLeft = Offset(center.x - m6.size.width / 2f, center.y + r6 - m6.size.height - numeralOffset)
+                topLeft = Offset(
+                    center.x - m6.size.width / 2f,
+                    center.y + halfH - m6.size.height - numeralSpacing
+                )
             )
 
             // "9" Left
             val m9 = textMeasurer.measure("9", style = numStyle)
-            val r9 = rSquircle(Math.toRadians(180.0), baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m9,
-                topLeft = Offset(center.x - r9 + numeralOffset, center.y - m9.size.height / 2f)
+                topLeft = Offset(
+                    center.x - halfW + numeralSpacing,
+                    center.y - m9.size.height / 2f
+                )
             )
 
             // "3" Right
             val m3 = textMeasurer.measure("3", style = numStyle)
-            val r3 = rSquircle(0.0, baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m3,
-                topLeft = Offset(center.x + r3 - m3.size.width - numeralOffset, center.y - m3.size.height / 2f)
+                topLeft = Offset(
+                    center.x + halfW - m3.size.width - numeralSpacing,
+                    center.y - m3.size.height / 2f
+                )
             )
 
-            // Optional subtle branding or date (if explicitly provided)
+            // Optional subtle city or date labels
             if (cityLabel.isNotEmpty()) {
+                val maxLabelWidth = (halfW * 1.2f).toInt().coerceAtLeast(40)
                 val badgeStyle = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.SemiBold,
@@ -218,34 +243,48 @@ fun RectangleAnalogClockWidget(
                     letterSpacing = 0.1.sp,
                     color = secondaryColor
                 )
-                val mBrand = textMeasurer.measure(cityLabel, style = badgeStyle)
+                val mBrand = textMeasurer.measure(
+                    text = cityLabel,
+                    style = badgeStyle,
+                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxLabelWidth),
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    maxLines = 1
+                )
                 drawText(
                     textLayoutResult = mBrand,
-                    topLeft = Offset(center.x - mBrand.size.width / 2f, center.y - baseRadius * 0.40f)
+                    topLeft = Offset(center.x - mBrand.size.width / 2f, center.y - minDim * 0.42f)
                 )
             }
             if (dateText.isNotEmpty()) {
+                val maxLabelWidth = (halfW * 1.2f).toInt().coerceAtLeast(40)
                 val dateStyle = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                     color = primaryColor
                 )
-                val mDate = textMeasurer.measure(dateText, style = dateStyle)
+                val mDate = textMeasurer.measure(
+                    text = dateText,
+                    style = dateStyle,
+                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxLabelWidth),
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    maxLines = 1
+                )
                 drawText(
                     textLayoutResult = mDate,
-                    topLeft = Offset(center.x - mDate.size.width / 2f, center.y + baseRadius * 0.38f)
+                    topLeft = Offset(center.x - mDate.size.width / 2f, center.y + minDim * 0.40f)
                 )
             }
 
-            // 4. White Rounded Baton Clock Hands with Depth Shadow
-            // Hour Hand
-            val hourLen = baseRadius * 0.46f
+            // 4. White Rounded Baton Clock Hands with Depth Shadows
+            // Hour Hand (Constant Radius based on dial bounds)
+            val hourAngle = currentTime.hourAngle
+            val hourLen = minDim * 0.48f
             val hourW = 6.5.dp.toPx()
             val hourTail = 10.dp.toPx()
 
             withTransform({
-                rotate(degrees = currentTime.hourAngle, pivot = center)
+                rotate(degrees = hourAngle, pivot = center)
             }) {
                 // Drop shadow
                 drawRoundRect(
@@ -262,13 +301,14 @@ fun RectangleAnalogClockWidget(
                 )
             }
 
-            // Minute Hand
-            val minuteLen = baseRadius * 0.72f
+            // Minute Hand (Constant Radius based on dial bounds)
+            val minuteAngle = currentTime.minuteAngle
+            val minuteLen = minDim * 0.74f
             val minuteW = 4.8.dp.toPx()
             val minuteTail = 12.dp.toPx()
 
             withTransform({
-                rotate(degrees = currentTime.minuteAngle, pivot = center)
+                rotate(degrees = minuteAngle, pivot = center)
             }) {
                 // Drop shadow
                 drawRoundRect(
@@ -285,9 +325,9 @@ fun RectangleAnalogClockWidget(
                 )
             }
 
-            // Second Hand: Razor-Sharp Vibrant Orange Needle
+            // Second Hand: Razor-Sharp Vibrant Orange Needle (Constant Radius)
             val secondAngle = currentTime.secondAngle(smooth = smoothSweep)
-            val secondLen = baseRadius * 0.86f
+            val secondLen = minDim * 0.88f
             val secondW = 1.8.dp.toPx()
             val secondTail = 14.dp.toPx()
 
@@ -312,7 +352,7 @@ fun RectangleAnalogClockWidget(
             }
 
             // 5. Authentic Center Pinion Hub: Orange Ring with Hollow Pitch-Black Core
-            val hubRadius = 6.5.dp.toPx()
+            val hubRadius = 6.dp.toPx()
             drawCircle(
                 color = secondColor,
                 radius = hubRadius,
@@ -329,12 +369,98 @@ fun RectangleAnalogClockWidget(
 }
 
 /**
- * Calculates radial distance from center to the boundary of a continuous-curvature squircle
- * using the Lamé curve / superellipse equation: |x/a|^n + |y/b|^n = 1.
+ * Representation of a boundary intersection point and its inward-pointing surface normal.
  */
-private fun rSquircle(thetaRad: Double, radius: Float, exponent: Float = 4.2f): Float {
-    val cosT = abs(cos(thetaRad)).toFloat()
-    val sinT = abs(sin(thetaRad)).toFloat()
-    val denom = (cosT.pow(exponent) + sinT.pow(exponent)).pow(1f / exponent)
-    return if (denom > 1e-4f) radius / denom else radius
+private data class RectBoundaryPoint(
+    val point: Offset,
+    val normal: Offset
+)
+
+/**
+ * Calculates the exact intersection of a ray from [center] at angle [angleRad]
+ * with a rounded rectangle of half-dimensions [halfW], [halfH] and corner radius [cornerRadius].
+ * Returns the intersection point and the inward-pointing normal vector.
+ */
+private fun intersectRoundedRect(
+    angleRad: Double,
+    halfW: Float,
+    halfH: Float,
+    cornerRadius: Float,
+    center: Offset
+): RectBoundaryPoint {
+    val dx = cos(angleRad).toFloat()
+    val dy = sin(angleRad).toFloat()
+    val r = cornerRadius.coerceAtMost(min(halfW, halfH))
+    val straightHalfW = halfW - r
+    val straightHalfH = halfH - r
+
+    // 1. Right straight edge
+    if (dx > 1e-5f) {
+        val t = halfW / dx
+        val y = t * dy
+        if (abs(y) <= straightHalfH) {
+            return RectBoundaryPoint(
+                point = Offset(center.x + halfW, center.y + y),
+                normal = Offset(-1f, 0f)
+            )
+        }
+    }
+
+    // 2. Left straight edge
+    if (dx < -1e-5f) {
+        val t = -halfW / dx
+        val y = t * dy
+        if (abs(y) <= straightHalfH) {
+            return RectBoundaryPoint(
+                point = Offset(center.x - halfW, center.y + y),
+                normal = Offset(1f, 0f)
+            )
+        }
+    }
+
+    // 3. Bottom straight edge
+    if (dy > 1e-5f) {
+        val t = halfH / dy
+        val x = t * dx
+        if (abs(x) <= straightHalfW) {
+            return RectBoundaryPoint(
+                point = Offset(center.x + x, center.y + halfH),
+                normal = Offset(0f, -1f)
+            )
+        }
+    }
+
+    // 4. Top straight edge
+    if (dy < -1e-5f) {
+        val t = -halfH / dy
+        val x = t * dx
+        if (abs(x) <= straightHalfW) {
+            return RectBoundaryPoint(
+                point = Offset(center.x + x, center.y - halfH),
+                normal = Offset(0f, 1f)
+            )
+        }
+    }
+
+    // 5. Corner Arcs
+    val cx = if (dx > 0) straightHalfW else -straightHalfW
+    val cy = if (dy > 0) straightHalfH else -straightHalfH
+
+    val dot = dx * cx + dy * cy
+    val c2 = cx * cx + cy * cy
+    val disc = dot * dot - (c2 - r * r)
+    val t = dot + sqrt(max(0f, disc))
+
+    val px = t * dx
+    val py = t * dy
+
+    val nx = cx - px
+    val ny = cy - py
+    val len = sqrt(nx * nx + ny * ny)
+    val norm = if (len > 1e-4f) Offset(nx / len, ny / len) else Offset(-dx, -dy)
+
+    return RectBoundaryPoint(
+        point = Offset(center.x + px, center.y + py),
+        normal = norm
+    )
 }

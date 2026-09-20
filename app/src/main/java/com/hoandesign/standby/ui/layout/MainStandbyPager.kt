@@ -64,6 +64,7 @@ import com.hoandesign.standby.model.collapseToDual
 import com.hoandesign.standby.model.expandSlot
 import com.hoandesign.standby.model.setScreen
 import com.hoandesign.standby.ui.components.HorizontalPagerIndicator
+import com.hoandesign.standby.ui.components.VerticalPagerIndicator
 import com.hoandesign.standby.ui.theme.StandbyBackground
 import com.hoandesign.standby.ui.theme.StandbyBorderSubtle
 import com.hoandesign.standby.ui.theme.StandbyCardBgSecondary
@@ -140,6 +141,7 @@ fun MainStandbyPager(
     val coroutineScope = rememberCoroutineScope()
     var isNavVisible by remember { mutableStateOf(true) }
     var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var isScreenIndicatorActive by remember { mutableStateOf(false) }
 
     fun recordInteraction() {
         lastInteractionTime = System.currentTimeMillis()
@@ -151,6 +153,15 @@ fun MainStandbyPager(
         if (isNavVisible && !isEditMode) {
             delay(4500L)
             isNavVisible = false
+        }
+    }
+
+    // Briefly display horizontal screen indicator upon screen page changes when nav is hidden
+    LaunchedEffect(horizontalPagerState.currentPage) {
+        if (!isNavVisible) {
+            isScreenIndicatorActive = true
+            delay(1800L)
+            isScreenIndicatorActive = false
         }
     }
 
@@ -365,37 +376,45 @@ fun MainStandbyPager(
                                         modifier = Modifier.fillMaxSize()
                                     )
 
-                                    // Floating Exit / Collapse Button
-                                    Box(
+                                    // Floating Exit / Collapse Button (Auto-hiding overlay placed safely at TopEnd away from numerals)
+                                    AnimatedVisibility(
+                                        visible = isNavVisible,
+                                        enter = fadeIn(),
+                                        exit = fadeOut(),
                                         modifier = Modifier
-                                            .align(Alignment.TopStart)
-                                            .padding(top = 18.dp, start = 20.dp)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(StandbyCardBgSecondary.copy(alpha = 0.88f))
-                                            .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(16.dp))
-                                            .clickable {
-                                                recordInteraction()
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                updateNavigationState(navigationState.collapseToDual())
-                                            }
-                                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                                            .align(Alignment.TopEnd)
+                                            .padding(top = 16.dp, end = 20.dp)
+                                            .zIndex(20f)
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(StandbyCardBgSecondary.copy(alpha = 0.88f))
+                                                .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(16.dp))
+                                                .clickable {
+                                                    recordInteraction()
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    updateNavigationState(navigationState.collapseToDual())
+                                                }
+                                                .padding(horizontal = 14.dp, vertical = 8.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.FullscreenExit,
-                                                contentDescription = "Collapse to Dual Bento",
-                                                tint = TextPrimary,
-                                                modifier = Modifier.size(16.dp)
-                                            )
-                                            Text(
-                                                text = "Dual Bento",
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = TextPrimary
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.FullscreenExit,
+                                                    contentDescription = "Collapse to Dual Bento",
+                                                    tint = TextPrimary,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    text = "Dual Bento",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = TextPrimary
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -423,26 +442,22 @@ fun MainStandbyPager(
                             )
                         }
 
-                        // Top-aligned stack indicator (floating overlay, auto-hiding with navigation or active swipe)
+                        // Side-aligned vertical stack indicator (zero-footprint floating overlay, auto-hiding with navigation or active swipe)
                         val showSingleIndicator = allSingleWidgets.size > 1 && (isNavVisible || singleModulePagerState.isScrollInProgress)
-                        val singleIndicatorPadding = if (isNavVisible) 58.dp else 12.dp
 
                         AnimatedVisibility(
                             visible = showSingleIndicator,
                             enter = fadeIn(),
                             exit = fadeOut(),
                             modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = singleIndicatorPadding)
-                                .zIndex(10f)
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 12.dp)
+                                .zIndex(15f)
                         ) {
-                            HorizontalPagerIndicator(
+                            VerticalPagerIndicator(
                                 pageCount = allSingleWidgets.size,
                                 currentPage = singleModulePagerState.currentPage,
-                                indicatorHeight = 4.dp,
-                                activeWidth = 14.dp,
-                                inactiveWidth = 4.dp,
-                                spacing = 4.dp
+                                hasBackdrop = true
                             )
                         }
                     }
@@ -504,9 +519,13 @@ fun MainStandbyPager(
                 .padding(top = 8.dp, start = 16.dp, end = 16.dp)
         )
 
-        // Subtle Top Pill Handle (when navigation is hidden, gives subtle hint to tap to show)
+        // Floating horizontal screen indicator, visible during active horizontal swiping or screen changes when top nav is hidden
+        val showHorizontalIndicator = (horizontalPagerState.isScrollInProgress || isScreenIndicatorActive) &&
+                !isNavVisible && !isEditMode
+
+        // Subtle Top Pill Handle (when navigation is hidden and indicator is not showing, gives subtle hint to tap to show)
         AnimatedVisibility(
-            visible = !isNavVisible && !isEditMode && navigationState.displayMode == WidgetDisplayMode.DUAL,
+            visible = !isNavVisible && !isEditMode && !showHorizontalIndicator && navigationState.displayMode == WidgetDisplayMode.DUAL,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
@@ -531,27 +550,20 @@ fun MainStandbyPager(
             }
         }
 
-        // Sleek iOS-style horizontal page indicator anchored at top edge (floating overlay, auto-hiding with navigation or active swipe)
-        val showHorizontalIndicator = (isNavVisible || isEditMode || horizontalPagerState.isScrollInProgress) &&
-                navigationState.displayMode == WidgetDisplayMode.DUAL
-        val indicatorTopPadding = if (isNavVisible || isEditMode) 58.dp else 12.dp
-
+        // Sleek iOS-style horizontal page indicator anchored at top edge (transient floating overlay with capsule backdrop)
         AnimatedVisibility(
             visible = showHorizontalIndicator,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = indicatorTopPadding)
-                .zIndex(15f)
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 16.dp)
+                .zIndex(20f)
         ) {
             HorizontalPagerIndicator(
                 pageCount = screens.size,
                 currentPage = horizontalPagerState.currentPage,
-                indicatorHeight = 4.dp,
-                activeWidth = 14.dp,
-                inactiveWidth = 4.dp,
-                spacing = 4.dp
+                hasBackdrop = true
             )
         }
     }
