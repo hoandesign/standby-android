@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.hoandesign.standby.ui.widgets.battery.BatteryWidget
 import com.hoandesign.standby.ui.widgets.calendar.ScheduleWidget
@@ -151,10 +152,36 @@ fun FullscreenAnalogClock(modifier: Modifier = Modifier) {
 
 @Composable
 fun FullscreenDigitalClock(modifier: Modifier = Modifier) {
+    val isNightMode = com.hoandesign.standby.ui.theme.StandbyTheme.isNightMode
+    val timeStr = androidx.compose.runtime.remember {
+        java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+    }
+    val dateStr = androidx.compose.runtime.remember {
+        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d")).uppercase()
+    }
+
     Box(modifier = modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("10:09", fontSize = 120.sp, color = Color.White, fontWeight = FontWeight.Bold, style = androidx.compose.ui.text.TextStyle(drawStyle = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)))
-            Text("WED, SEP 20", fontSize = 24.sp, color = Color(0xFFFFA500), fontWeight = FontWeight.Bold)
+            Text(
+                text = timeStr,
+                fontSize = 120.sp,
+                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
+                fontWeight = FontWeight.Black,
+                fontFamily = com.hoandesign.standby.ui.theme.InterFontFamily,
+                letterSpacing = (-0.05).em,
+                style = if (isNightMode) {
+                    androidx.compose.ui.text.TextStyle(drawStyle = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f))
+                } else {
+                    androidx.compose.ui.text.TextStyle()
+                }
+            )
+            Text(
+                text = dateStr,
+                fontSize = 24.sp,
+                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color(0xFFFFA500),
+                fontWeight = FontWeight.Bold,
+                fontFamily = com.hoandesign.standby.ui.theme.InterFontFamily
+            )
             Row(modifier = Modifier.padding(top = 16.dp)) {
                 AssistChip(onClick = {}, label = { Text("72° Sunny") })
                 Spacer(modifier = Modifier.width(8.dp))
