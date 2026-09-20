@@ -169,7 +169,7 @@ fun WeatherWidget(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
-                        text = if (!hasLocationPerm) "📍 TAP TO ENABLE" else weather.cityName.uppercase(),
+                        text = if (!hasLocationPerm) "📍 TAP TO ENABLE" else if (weather.cityName == "Location Needed") "LOCAL WEATHER" else weather.cityName.uppercase(),
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
@@ -179,7 +179,7 @@ fun WeatherWidget(
                         )
                     )
                     Text(
-                        text = if (!hasLocationPerm) "Grant location permission" else weather.condition,
+                        text = if (!hasLocationPerm) "Grant location permission" else if (weather.condition == "Location Needed") "Tap to refresh" else weather.condition,
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.SemiBold,
@@ -191,7 +191,7 @@ fun WeatherWidget(
 
                 // Weather Icon Emoji
                 Text(
-                    text = if (!hasLocationPerm) "📍" else weather.iconEmoji,
+                    text = if (!hasLocationPerm || weather.condition == "Location Needed") "⛅" else weather.iconEmoji,
                     fontSize = if (availableHeight < 140.dp) 24.sp else 32.sp
                 )
             }
@@ -204,7 +204,7 @@ fun WeatherWidget(
             ) {
                 // Prominent Temperature
                 AnimatedContent(
-                    targetState = if (!hasLocationPerm) "--°" else (if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"),
+                    targetState = if (!hasLocationPerm || weather.cityName == "Location Needed") "--°" else (if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"),
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "TempUnitTransition"
                 ) { displayTemp ->
@@ -226,8 +226,8 @@ fun WeatherWidget(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.padding(bottom = 6.dp)
                 ) {
-                    val highVal = if (!hasLocationPerm) "--" else (if (showCelsius) ((weather.highTemp - 32) * 5 / 9).toString() else weather.highTemp.toString())
-                    val lowVal = if (!hasLocationPerm) "--" else (if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString())
+                    val highVal = if (!hasLocationPerm || weather.cityName == "Location Needed") "--" else (if (showCelsius) ((weather.highTemp - 32) * 5 / 9).toString() else weather.highTemp.toString())
+                    val lowVal = if (!hasLocationPerm || weather.cityName == "Location Needed") "--" else (if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString())
 
                     Text(
                         text = "H: $highVal°",

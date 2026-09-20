@@ -366,7 +366,7 @@ fun FullscreenWeather(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = weather.cityName.uppercase(),
+                        text = if (weather.cityName == "Location Needed") "LOCAL WEATHER" else weather.cityName.uppercase(),
                         color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -377,16 +377,16 @@ fun FullscreenWeather(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         Text(
-                            text = "${weather.tempFahrenheit}°",
+                            text = if (weather.cityName == "Location Needed") "--°" else "${weather.tempFahrenheit}°",
                             fontSize = 80.sp,
                             fontWeight = FontWeight.Black,
                             color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
                             letterSpacing = (-0.03).em
                         )
-                        Text(weather.iconEmoji, fontSize = 54.sp)
+                        Text(if (weather.cityName == "Location Needed") "⛅" else weather.iconEmoji, fontSize = 54.sp)
                     }
                     Text(
-                        text = "${weather.condition}  ·  H: ${weather.highTemp}°  L: ${weather.lowTemp}°",
+                        text = if (weather.condition == "Location Needed") "Tap to refresh" else "${weather.condition}  ·  H: ${weather.highTemp}°  L: ${weather.lowTemp}°",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary

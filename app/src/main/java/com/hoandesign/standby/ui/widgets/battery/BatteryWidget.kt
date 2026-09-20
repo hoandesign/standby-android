@@ -312,28 +312,27 @@ private fun FullscreenBatteryDashboard(
     pulseAlpha: Float,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(20.dp),
         contentAlignment = Alignment.Center
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Main Phone Battery Ring
+        val isPortrait = maxHeight > maxWidth || maxWidth < 560.dp
+        val ringSize = if (isPortrait) 160.dp else 200.dp
+        val cardWidth = if (isPortrait) Modifier.fillMaxWidth() else Modifier.width(280.dp)
+
+        @Composable
+        fun BatteryRingContent() {
             Box(
-                modifier = Modifier
-                    .size(200.dp),
+                modifier = Modifier.size(ringSize),
                 contentAlignment = Alignment.Center
             ) {
                 val fraction = (batteryState.percentage / 100f).coerceIn(0f, 1f)
                 val effectiveAlpha = if (batteryState.isCharging) pulseAlpha else 1.0f
 
                 Canvas(modifier = Modifier.fillMaxSize()) {
-                    val strokeWidth = 18.dp.toPx()
+                    val strokeWidth = 16.dp.toPx()
                     val arcSize = size.width - strokeWidth
                     val topLeft = Offset(strokeWidth / 2f, strokeWidth / 2f)
 
@@ -369,7 +368,7 @@ private fun FullscreenBatteryDashboard(
                             imageVector = Icons.Default.Bolt,
                             contentDescription = "Charging",
                             tint = activeAccent,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(28.dp)
                         )
                     }
                     Text(
@@ -377,7 +376,7 @@ private fun FullscreenBatteryDashboard(
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Black,
-                            fontSize = 44.sp,
+                            fontSize = 38.sp,
                             color = activeAccent
                         )
                     )
@@ -386,25 +385,27 @@ private fun FullscreenBatteryDashboard(
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             color = TextSecondary
                         )
                     )
                 }
             }
+        }
 
-            // Power Specs & Telemetry Cards
+        @Composable
+        fun TelemetryCardsContent() {
             Column(
-                modifier = Modifier.width(260.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = cardWidth,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
                     text = "POWER TELEMETRY",
                     style = TextStyle(
                         fontFamily = FontFamily.Default,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        letterSpacing = 0.1.em,
+                        fontSize = 11.sp,
+                        letterSpacing = 0.08.em,
                         color = TextTertiary
                     )
                 )
@@ -416,9 +417,9 @@ private fun FullscreenBatteryDashboard(
                         .clip(RoundedCornerShape(16.dp))
                         .background(StandbyCardBgSecondary)
                         .border(1.dp, StandbyBorder, RoundedCornerShape(16.dp))
-                        .padding(16.dp)
+                        .padding(14.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = "CHARGING STATE",
                             style = TextStyle(
@@ -430,7 +431,7 @@ private fun FullscreenBatteryDashboard(
                         Text(
                             text = batteryState.chargeSpeed,
                             style = TextStyle(
-                                fontSize = 18.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (batteryState.isCharging) activeAccent else TextPrimary
                             )
@@ -459,7 +460,7 @@ private fun FullscreenBatteryDashboard(
                         .clip(RoundedCornerShape(16.dp))
                         .background(StandbyCardBgSecondary)
                         .border(1.dp, StandbyBorder, RoundedCornerShape(16.dp))
-                        .padding(16.dp)
+                        .padding(14.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -478,28 +479,41 @@ private fun FullscreenBatteryDashboard(
                             Text(
                                 text = "${batteryState.capacityMah} mAh",
                                 style = TextStyle(
-                                    fontSize = 18.sp,
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary
                                 )
                             )
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(activeAccent.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "OLED Optimal",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = activeAccent
-                            )
-                        }
+                        Text(
+                            text = "HEALTHY",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = activeAccent
+                        )
                     }
                 }
+            }
+        }
+
+        if (isPortrait) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceEvenly
+            ) {
+                BatteryRingContent()
+                TelemetryCardsContent()
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                BatteryRingContent()
+                TelemetryCardsContent()
             }
         }
     }
