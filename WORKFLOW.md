@@ -1,6 +1,32 @@
 # StandBy Android — Continuous Improvement & Deployment Workflow
 
-This document outlines the autonomous development loop, design principles, testing protocols, and automated release pipeline for **StandBy Android**. 
+This document outlines the autonomous development loop, design principles, testing protocols, and automated release pipeline for **StandBy Android**.
+
+---
+
+## 0. MANDATORY ALL-TURN AUTOMATION CONTRACT (ZERO-OMISSION PROTOCOL)
+
+**CRITICAL MANDATE:** In EVERY SINGLE TURN where features, bug fixes, or UI changes are requested or made, the assistant MUST execute and report the complete 4-stage pipeline before concluding the turn:
+
+```mermaid
+flowchart LR
+    A["1. Code & Unit Tests\n(./gradlew test)"] --> B["2. Auto-Deploy Play Store\n(scripts/turn_runner.sh)"]
+    B --> C["3. Blind Auditor Subagent\n(Zero-Bias Scorecard)"]
+    C --> D["4. Full Report to Hoàn\n(Changes + Play + Audit)"]
+```
+
+### The Turn-End Checklist (Never Skip Any Item):
+1. **Zero-Collision Implementation:** Clean Compose architecture, OLED black (`#000000`), zero header/badge overlaps, zero mocked data.
+2. **Automated Turn Pipeline (`scripts/turn_runner.sh`):**
+   * Runs `./gradlew test` (guaranteeing 100% passing unit tests).
+   * Compiles release AAB bundle & APK with R8 Full Mode.
+   * Uploads bundle directly to **Google Play Console Internal Testing** via Android Publisher API.
+   * Commits and pushes changes to GitHub `main`.
+3. **Independent Adversarial Audit:** Spawns a fresh, blind `independent_code_auditor` subagent with no developer bias to inspect the code and physical screenshots, scoring the build against the 5-Pillar Scorecard.
+4. **Mandatory Final Response Delivery:** Every turn response to Hoàn MUST include:
+   - **Feature Summary:** Clear explanation of changes in simple, non-technical terms.
+   - **Google Play Deployment Details:** Version code, track (`internal`), Edit ID, and bundle size.
+   - **Full Auditor Scorecard & Verdict:** Aesthetics, Architecture, UX, Battery/Performance, and Production Readiness scores.
 
 ---
 
