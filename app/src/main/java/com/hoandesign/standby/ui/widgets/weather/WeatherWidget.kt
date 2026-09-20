@@ -132,10 +132,12 @@ fun WeatherWidget(
     val observedState by weatherFlow.collectAsState(initial = repository.getCachedWeather())
     val weather = initialWeather ?: observedState
 
+    val prefs = remember(context) {
+        context.getSharedPreferences(com.hoandesign.standby.receiver.ChargingReceiver.PREFS_NAME, android.content.Context.MODE_PRIVATE)
+    }
+
     val tempPreference = StandbyTheme.temperatureUnit
-    var overrideUnit by remember { mutableStateOf<com.hoandesign.standby.model.TemperatureUnit?>(null) }
-    val effectiveUnit = overrideUnit ?: tempPreference
-    val showCelsius = effectiveUnit == com.hoandesign.standby.model.TemperatureUnit.CELSIUS
+    val showCelsius = tempPreference == com.hoandesign.standby.model.TemperatureUnit.CELSIUS
     val isNightMode = StandbyTheme.isNightMode
 
     BoxWithConstraints(
@@ -151,7 +153,8 @@ fun WeatherWidget(
                         )
                     )
                 } else {
-                    overrideUnit = if (showCelsius) com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS
+                    val nextUnit = if (showCelsius) com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS
+                    prefs.edit().putString("pref_temp_unit", if (nextUnit == com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT) "F" else "C").apply()
                 }
             }
             .padding(14.dp)
@@ -190,10 +193,11 @@ fun WeatherWidget(
                     )
                 }
 
-                // Weather Icon Emoji
-                Text(
-                    text = if (!hasLocationPerm || weather.condition == "Location Needed") "⛅" else weather.iconEmoji,
-                    fontSize = if (availableHeight < 140.dp) 24.sp else 32.sp
+                // Bespoke Vector Weather Iconography (Never generic emojis)
+                com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                    condition = if (!hasLocationPerm || weather.condition == "Location Needed") "Partly Cloudy" else weather.condition,
+                    size = if (availableHeight < 140.dp) 26.dp else 34.dp,
+                    isNightMode = isNightMode
                 )
             }
 

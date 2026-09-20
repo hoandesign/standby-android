@@ -18,25 +18,28 @@ class StandbyNavigationTest {
     @Test
     fun testStandbyScreen_enumOrderAndTitles() {
         val screens = StandbyScreen.entries
-        assertEquals(3, screens.size)
+        assertEquals(4, screens.size)
 
-        assertEquals(StandbyScreen.DUAL_WIDGET, screens[0])
-        assertEquals(StandbyScreen.HERO_CLOCK, screens[1])
-        assertEquals(StandbyScreen.NOW_PLAYING, screens[2])
+        assertEquals(StandbyScreen.BENTO, screens[0])
+        assertEquals(StandbyScreen.SINGLE_MODULE, screens[1])
+        assertEquals(StandbyScreen.HERO_CLOCK, screens[2])
+        assertEquals(StandbyScreen.NOW_PLAYING, screens[3])
 
-        assertEquals(0, StandbyScreen.DUAL_WIDGET.ordinal)
-        assertEquals(1, StandbyScreen.HERO_CLOCK.ordinal)
-        assertEquals(2, StandbyScreen.NOW_PLAYING.ordinal)
+        assertEquals(0, StandbyScreen.BENTO.ordinal)
+        assertEquals(1, StandbyScreen.SINGLE_MODULE.ordinal)
+        assertEquals(2, StandbyScreen.HERO_CLOCK.ordinal)
+        assertEquals(3, StandbyScreen.NOW_PLAYING.ordinal)
 
-        assertEquals("Widgets", StandbyScreen.DUAL_WIDGET.title)
-        assertEquals("Clock", StandbyScreen.HERO_CLOCK.title)
+        assertEquals("Bento", StandbyScreen.BENTO.title)
+        assertEquals("Single", StandbyScreen.SINGLE_MODULE.title)
+        assertEquals("Clocks", StandbyScreen.HERO_CLOCK.title)
         assertEquals("Music", StandbyScreen.NOW_PLAYING.title)
     }
 
     @Test
     fun testNavigationState_defaults() {
         val defaultState = NavigationState()
-        assertEquals(StandbyScreen.DUAL_WIDGET, defaultState.currentScreen)
+        assertEquals(StandbyScreen.BENTO, defaultState.currentScreen)
         assertEquals(WidgetDisplayMode.DUAL, defaultState.displayMode)
         assertEquals(0, defaultState.expandedSlotIndex)
     }
@@ -44,7 +47,7 @@ class StandbyNavigationTest {
     @Test
     fun testNavigationState_toggleDisplayMode() {
         val initialState = NavigationState(
-            currentScreen = StandbyScreen.DUAL_WIDGET,
+            currentScreen = StandbyScreen.BENTO,
             displayMode = WidgetDisplayMode.DUAL,
             expandedSlotIndex = 0
         )
@@ -53,7 +56,7 @@ class StandbyNavigationTest {
         val expandedSlot0 = initialState.toggleDisplayMode(slotIndex = 0)
         assertEquals(WidgetDisplayMode.SINGLE_EXPANDED, expandedSlot0.displayMode)
         assertEquals(0, expandedSlot0.expandedSlotIndex)
-        assertEquals(StandbyScreen.DUAL_WIDGET, expandedSlot0.currentScreen)
+        assertEquals(StandbyScreen.BENTO, expandedSlot0.currentScreen)
 
         // Toggle back from SINGLE_EXPANDED -> DUAL
         val collapsedState = expandedSlot0.toggleDisplayMode()
@@ -84,9 +87,12 @@ class StandbyNavigationTest {
     @Test
     fun testNavigationState_screenCycling() {
         var state = NavigationState()
-        assertEquals(StandbyScreen.DUAL_WIDGET, state.currentScreen)
+        assertEquals(StandbyScreen.BENTO, state.currentScreen)
 
-        // Forward cycling: DUAL_WIDGET -> HERO_CLOCK -> NOW_PLAYING -> DUAL_WIDGET
+        // Forward cycling: BENTO -> SINGLE_MODULE -> HERO_CLOCK -> NOW_PLAYING -> BENTO
+        state = state.nextScreen()
+        assertEquals(StandbyScreen.SINGLE_MODULE, state.currentScreen)
+
         state = state.nextScreen()
         assertEquals(StandbyScreen.HERO_CLOCK, state.currentScreen)
 
@@ -94,9 +100,9 @@ class StandbyNavigationTest {
         assertEquals(StandbyScreen.NOW_PLAYING, state.currentScreen)
 
         state = state.nextScreen()
-        assertEquals(StandbyScreen.DUAL_WIDGET, state.currentScreen)
+        assertEquals(StandbyScreen.BENTO, state.currentScreen)
 
-        // Backward cycling: DUAL_WIDGET -> NOW_PLAYING -> HERO_CLOCK -> DUAL_WIDGET
+        // Backward cycling: BENTO -> NOW_PLAYING -> HERO_CLOCK -> SINGLE_MODULE -> BENTO
         state = state.previousScreen()
         assertEquals(StandbyScreen.NOW_PLAYING, state.currentScreen)
 
@@ -104,7 +110,10 @@ class StandbyNavigationTest {
         assertEquals(StandbyScreen.HERO_CLOCK, state.currentScreen)
 
         state = state.previousScreen()
-        assertEquals(StandbyScreen.DUAL_WIDGET, state.currentScreen)
+        assertEquals(StandbyScreen.SINGLE_MODULE, state.currentScreen)
+
+        state = state.previousScreen()
+        assertEquals(StandbyScreen.BENTO, state.currentScreen)
     }
 
     @Test

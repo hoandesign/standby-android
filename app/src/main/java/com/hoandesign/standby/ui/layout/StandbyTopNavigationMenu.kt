@@ -182,11 +182,7 @@ fun StandbyTopNavigationMenu(
                     ) {
                         StandbyScreen.entries.forEach { screen ->
                             val isSelected = currentScreen == screen
-                            val tabTitle = when (screen) {
-                                StandbyScreen.DUAL_WIDGET -> "Bento"
-                                StandbyScreen.HERO_CLOCK -> "Clock"
-                                StandbyScreen.NOW_PLAYING -> "Music"
-                            }
+                            val tabTitle = screen.title
 
                             Box(
                                 modifier = Modifier
@@ -217,7 +213,7 @@ fun StandbyTopNavigationMenu(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        if (currentScreen == StandbyScreen.DUAL_WIDGET) {
+                        if (currentScreen == StandbyScreen.BENTO) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))

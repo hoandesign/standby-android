@@ -1,5 +1,6 @@
 package com.hoandesign.standby.ui.widgets.clock
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,12 +12,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,13 +67,22 @@ import kotlinx.coroutines.isActive
 fun BigDigitalClockWidget(
     modifier: Modifier = Modifier,
     clockTime: ClockTime? = null,
-    dateText: String = "MON 5 · 76°",
+    dateText: String = "",
     alarmText: String = "6:30 AM",
     accentColor: Color = StandbyTheme.accentColor,
     is24Hour: Boolean = false
 ) {
     val isNightMode = StandbyTheme.isNightMode
     val activeColor = if (isNightMode) NightRed else accentColor
+
+    val today = remember { java.time.LocalDate.now() }
+    val dayOfWeek = today.dayOfWeek.name.take(3)
+    val dayOfMonth = today.dayOfMonth
+    val isCelsius = StandbyTheme.temperatureUnit == com.hoandesign.standby.model.TemperatureUnit.CELSIUS
+    val resolvedDateText = if (dateText.isNotBlank()) dateText else {
+        val tempDisplay = if (isCelsius) "24°C" else "76°F"
+        "$dayOfWeek $dayOfMonth · $tempDisplay"
+    }
 
     // Live clock update loop (1-second ticking cadence)
     val time by produceState(
@@ -116,7 +133,7 @@ fun BigDigitalClockWidget(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     DateBannerChip(
-                        text = dateText,
+                        text = resolvedDateText,
                         fontSize = metaFontSize,
                         isNightMode = isNightMode
                     )
@@ -171,7 +188,7 @@ fun BigDigitalClockWidget(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     DateBannerChip(
-                        text = dateText,
+                        text = resolvedDateText,
                         fontSize = metaFontSize,
                         isNightMode = isNightMode
                     )
@@ -186,38 +203,40 @@ fun BigDigitalClockWidget(
                     }
                 }
 
-                // Center: Stacked Digits
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // Center Digit Stack: Hours over Minutes
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = hoursString,
-                        style = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.Black,
-                            fontSize = digitFontSize,
-                            lineHeight = digitFontSize * 0.85f,
-                            letterSpacing = (-0.05).em,
-                            color = activeColor,
-                            textAlign = TextAlign.Center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = hoursString,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.Black,
+                                fontSize = digitFontSize,
+                                lineHeight = digitFontSize * 0.90f,
+                                letterSpacing = (-0.05).em,
+                                color = activeColor,
+                                textAlign = TextAlign.Center
+                            )
                         )
-                    )
-                    Text(
-                        text = minutesString,
-                        style = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.Black,
-                            fontSize = digitFontSize,
-                            lineHeight = digitFontSize * 0.85f,
-                            letterSpacing = (-0.05).em,
-                            color = activeColor,
-                            textAlign = TextAlign.Center
+                        Text(
+                            text = minutesString,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.Black,
+                                fontSize = digitFontSize,
+                                lineHeight = digitFontSize * 0.90f,
+                                letterSpacing = (-0.05).em,
+                                color = activeColor,
+                                textAlign = TextAlign.Center
+                            )
                         )
-                    )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(2.dp))
@@ -249,7 +268,7 @@ private fun DateBannerChip(
 }
 
 /**
- * Minimalist alarm chip with clock icon and alarm time.
+ * Minimalist alarm chip with sleek vector clock icon and alarm time (no generic emoji).
  */
 @Composable
 private fun AlarmIndicatorChip(
@@ -260,6 +279,7 @@ private fun AlarmIndicatorChip(
 ) {
     val chipBg = if (isNightMode) Color(0x33FF453A) else StandbyCardBgSecondary
     val contentColor = if (isNightMode) NightRed else TextSecondary
+    val iconSizeDp = with(LocalDensity.current) { (fontSize * 1.05f).toDp() }
 
     Box(
         modifier = Modifier
@@ -270,11 +290,11 @@ private fun AlarmIndicatorChip(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            Text(
-                text = "⏰",
-                fontSize = fontSize * 0.95f
+            VectorAlarmIcon(
+                size = iconSizeDp,
+                tint = contentColor
             )
             Text(
                 text = alarmText,
@@ -286,5 +306,53 @@ private fun AlarmIndicatorChip(
                 )
             )
         }
+    }
+}
+
+@Composable
+private fun VectorAlarmIcon(
+    size: Dp,
+    tint: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(modifier = modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
+        val center = Offset(w / 2f, h / 2f + h * 0.05f)
+        val radius = w * 0.36f
+        val strokeWidth = 1.3.dp.toPx()
+
+        // Clock Body Ring
+        drawCircle(
+            color = tint,
+            radius = radius,
+            center = center,
+            style = Stroke(width = strokeWidth)
+        )
+
+        // Clock Hands (pointing at 10:10)
+        drawLine(
+            color = tint,
+            start = center,
+            end = Offset(center.x - radius * 0.45f, center.y - radius * 0.28f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+        drawLine(
+            color = tint,
+            start = center,
+            end = Offset(center.x + radius * 0.45f, center.y - radius * 0.28f),
+            strokeWidth = strokeWidth,
+            cap = StrokeCap.Round
+        )
+
+        // Twin Bells
+        val bellDist = radius * 1.06f
+        val bellRadius = radius * 0.26f
+        val leftBellCenter = Offset(center.x - bellDist * 0.707f, center.y - bellDist * 0.707f)
+        val rightBellCenter = Offset(center.x + bellDist * 0.707f, center.y - bellDist * 0.707f)
+
+        drawCircle(color = tint, radius = bellRadius, center = leftBellCenter)
+        drawCircle(color = tint, radius = bellRadius, center = rightBellCenter)
     }
 }

@@ -126,6 +126,17 @@ fun MainStandbyPager(
         pageCount = { safeRightIds.size }
     )
 
+    val allSingleWidgets = remember(safeLeftIds, safeRightIds) {
+        val combined = safeLeftIds + safeRightIds
+        val distinct = combined.distinct()
+        if (distinct.isNotEmpty()) distinct else listOf(StandbyWidgetId.RECTANGLE_CLOCK, StandbyWidgetId.WEATHER, StandbyWidgetId.MONTH_CALENDAR)
+    }
+
+    val singleModulePagerState = rememberPagerState(
+        initialPage = 0,
+        pageCount = { allSingleWidgets.size }
+    )
+
     val haptic = LocalHapticFeedback.current
     val coroutineScope = rememberCoroutineScope()
     var isNavVisible by remember { mutableStateOf(true) }
@@ -161,6 +172,20 @@ fun MainStandbyPager(
     // Snap haptic feedback on vertical stack page change (Right slot)
     LaunchedEffect(rightPagerState) {
         snapshotFlow { rightPagerState.currentPage }
+            .drop(1)
+            .collect {
+                recordInteraction()
+                try {
+                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                } catch (e: Throwable) {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                }
+            }
+    }
+
+    // Snap haptic feedback on Single Module vertical page change
+    LaunchedEffect(singleModulePagerState) {
+        snapshotFlow { singleModulePagerState.currentPage }
             .drop(1)
             .collect {
                 recordInteraction()
@@ -234,7 +259,7 @@ fun MainStandbyPager(
             modifier = Modifier.fillMaxSize()
         ) { pageIndex ->
             when (screens[pageIndex]) {
-                StandbyScreen.DUAL_WIDGET -> {
+                StandbyScreen.BENTO -> {
                     AnimatedContent(
                         targetState = navigationState.displayMode,
                         transitionSpec = {
@@ -384,6 +409,38 @@ fun MainStandbyPager(
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+                StandbyScreen.SINGLE_MODULE -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(onTap = { recordInteraction() })
+                            }
+                    ) {
+                        VerticalPager(
+                            state = singleModulePagerState,
+                            modifier = Modifier.fillMaxSize()
+                        ) { singlePage ->
+                            val widgetId = allSingleWidgets[singlePage.coerceIn(0, allSingleWidgets.size - 1)]
+                            StandbyWidgetRegistry.RenderFullscreen(
+                                widgetId = widgetId,
+                                accentColor = accentColor,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        // Right-aligned vertical dot indicator
+                        if (allSingleWidgets.size > 1) {
+                            VerticalPagerIndicator(
+                                pageCount = allSingleWidgets.size,
+                                currentPage = singleModulePagerState.currentPage,
+                                modifier = Modifier
+                                    .align(Alignment.CenterEnd)
+                                    .padding(end = 14.dp)
+                            )
                         }
                     }
                 }

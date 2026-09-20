@@ -83,8 +83,14 @@ import com.hoandesign.standby.ui.theme.StandbyCardBgSecondary
 import com.hoandesign.standby.ui.theme.TextPrimary
 import com.hoandesign.standby.ui.theme.TextSecondary
 import com.hoandesign.standby.ui.theme.TextTertiary
+import androidx.compose.runtime.DisposableEffect
+import android.content.SharedPreferences
+import com.hoandesign.standby.ui.widgets.clock.AnalogClockWidget
 import com.hoandesign.standby.ui.widgets.clock.BigDigitalClockWidget
 import com.hoandesign.standby.ui.widgets.clock.RadialClockWidget
+import com.hoandesign.standby.ui.widgets.clock.RectangleAnalogClockWidget
+import com.hoandesign.standby.ui.widgets.clock.RetroFlipClockWidget
+import com.hoandesign.standby.ui.widgets.clock.SolarArcClockWidget
 import com.hoandesign.standby.ui.widgets.media.MusicPlayerWidget
 
 /**
@@ -142,6 +148,19 @@ fun MainStandbyScreen(
     fun persistTemperatureUnit(newUnit: TemperatureUnit) {
         currentTemperatureUnit = newUnit
         prefs.edit().putString("pref_temp_unit", if (newUnit == TemperatureUnit.FAHRENHEIT) "F" else "C").apply()
+    }
+
+    DisposableEffect(prefs) {
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
+            if (key == "pref_temp_unit") {
+                val raw = sp.getString("pref_temp_unit", "C")
+                currentTemperatureUnit = if (raw == "F") TemperatureUnit.FAHRENHEIT else TemperatureUnit.CELSIUS
+            }
+        }
+        prefs.registerOnSharedPreferenceChangeListener(listener)
+        onDispose {
+            prefs.unregisterOnSharedPreferenceChangeListener(listener)
+        }
     }
 
     // Dynamic Bento Slot State (persisted to SharedPreferences)
@@ -313,7 +332,13 @@ fun MainStandbyScreen(
 }
 
 /**
- * Full-screen Hero Clock view toggling between [RadialClockWidget] and [BigDigitalClockWidget] on tap.
+ * Full-screen Hero Clock suite cycling between 6 clock faces on tap:
+ * 0: [RectangleAnalogClockWidget] (Tank Bauhaus dial)
+ * 1: [RadialClockWidget] (Cardinal typography dial)
+ * 2: [BigDigitalClockWidget] (iOS 18 digital typography)
+ * 3: [AnalogClockWidget] (Classic Swiss dial)
+ * 4: [RetroFlipClockWidget] (Split-flap mechanical flip)
+ * 5: [SolarArcClockWidget] (Sun trajectory arc)
  */
 @Composable
 private fun HeroClockView(
@@ -329,17 +354,33 @@ private fun HeroClockView(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null
             ) {
-                heroClockStyle = (heroClockStyle + 1) % 2
+                heroClockStyle = (heroClockStyle + 1) % 6
             },
         contentAlignment = Alignment.Center
     ) {
-        if (heroClockStyle == 0) {
-            RadialClockWidget(
+        when (heroClockStyle) {
+            0 -> RectangleAnalogClockWidget(
+                accentColor = accentColor,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp)
+            )
+            1 -> RadialClockWidget(
                 accentColor = accentColor,
                 modifier = Modifier.fillMaxSize()
             )
-        } else {
-            BigDigitalClockWidget(
+            2 -> BigDigitalClockWidget(
+                accentColor = accentColor,
+                modifier = Modifier.fillMaxSize()
+            )
+            3 -> AnalogClockWidget(
+                modifier = Modifier.fillMaxSize()
+            )
+            4 -> RetroFlipClockWidget(
+                accentColor = accentColor,
+                modifier = Modifier.fillMaxSize()
+            )
+            else -> SolarArcClockWidget(
                 accentColor = accentColor,
                 modifier = Modifier.fillMaxSize()
             )

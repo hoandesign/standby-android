@@ -98,6 +98,24 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 mutableStateOf(prefs.getBoolean(ChargingReceiver.KEY_AUTO_LAUNCH_ON_DOCK, true))
             }
 
+            var temperatureUnit by remember {
+                val raw = prefs.getString("pref_temp_unit", "C")
+                mutableStateOf(if (raw == "F") com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS)
+            }
+
+            androidx.compose.runtime.DisposableEffect(prefs) {
+                val listener = android.content.SharedPreferences.OnSharedPreferenceChangeListener { sp, key ->
+                    if (key == "pref_temp_unit") {
+                        val raw = sp.getString("pref_temp_unit", "C")
+                        temperatureUnit = if (raw == "F") com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS
+                    }
+                }
+                prefs.registerOnSharedPreferenceChangeListener(listener)
+                onDispose {
+                    prefs.unregisterOnSharedPreferenceChangeListener(listener)
+                }
+            }
+
             // Sync sensor lux updates to nightModeState
             LaunchedEffect(ambientLux) {
                 nightModeState = nightModeState.withLux(ambientLux)
@@ -105,7 +123,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
             StandByTheme(
                 nightModeState = nightModeState,
-                accentColor = accentColor
+                accentColor = accentColor,
+                temperatureUnit = temperatureUnit
             ) {
                 MainStandbyScreen(
                     nightModeState = nightModeState,

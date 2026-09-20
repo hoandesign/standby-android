@@ -275,9 +275,10 @@ fun FullscreenWeather(
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
-                        Text(
-                            text = weather.iconEmoji,
-                            fontSize = 40.sp
+                        com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                            condition = weather.condition,
+                            size = 40.dp,
+                            isNightMode = isNightMode
                         )
                     }
 
@@ -333,7 +334,11 @@ fun FullscreenWeather(
                                 ) {
                                     val hourDisplay = if (isCelsius) "${hour.tempCelsius}°" else "${hour.tempFahrenheit}°"
                                     Text(hour.timeLabel, fontSize = 11.sp, color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary)
-                                    Text(hour.conditionEmoji, fontSize = 18.sp)
+                                    com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                                        condition = hour.conditionEmoji,
+                                        size = 18.dp,
+                                        isNightMode = isNightMode
+                                    )
                                     Text(hourDisplay, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                                 }
                             }
@@ -361,7 +366,11 @@ fun FullscreenWeather(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(day.dayLabel, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = if (isNightMode) Color(0xCCFF453A) else Color.White, modifier = Modifier.width(50.dp))
-                                Text(day.conditionEmoji, fontSize = 16.sp)
+                                com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                                    condition = day.conditionEmoji,
+                                    size = 18.dp,
+                                    isNightMode = isNightMode
+                                )
                                 Text("L: $dLow", fontSize = 12.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
                                 Text("H: $dHigh", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                             }
@@ -400,7 +409,11 @@ fun FullscreenWeather(
                             color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
                             letterSpacing = (-0.03).em
                         )
-                        Text(if (weather.cityName == "Location Needed") "⛅" else weather.iconEmoji, fontSize = 54.sp)
+                        com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                            condition = if (weather.cityName == "Location Needed") "Partly Cloudy" else weather.condition,
+                            size = 54.dp,
+                            isNightMode = isNightMode
+                        )
                     }
                     val lHigh = if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
                     val lLow = if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
@@ -435,7 +448,11 @@ fun FullscreenWeather(
                                     verticalArrangement = Arrangement.spacedBy(2.dp)
                                 ) {
                                     Text(hour.timeLabel, fontSize = 10.sp, color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary)
-                                    Text(hour.conditionEmoji, fontSize = 16.sp)
+                                    com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                                        condition = hour.conditionEmoji,
+                                        size = 18.dp,
+                                        isNightMode = isNightMode
+                                    )
                                     Text(hourDisplay, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                                 }
                             }
@@ -462,7 +479,11 @@ fun FullscreenWeather(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(day.dayLabel, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = if (isNightMode) Color(0xCCFF453A) else Color.White, modifier = Modifier.width(45.dp))
-                                    Text(day.conditionEmoji, fontSize = 14.sp)
+                                    com.hoandesign.standby.ui.components.WeatherVectorIcon(
+                                        condition = day.conditionEmoji,
+                                        size = 18.dp,
+                                        isNightMode = isNightMode
+                                    )
                                     Text("L: $dLow", fontSize = 11.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
                                     Text("H: $dHigh", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
                                 }

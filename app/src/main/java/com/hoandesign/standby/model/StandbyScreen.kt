@@ -2,10 +2,17 @@ package com.hoandesign.standby.model
 
 /**
  * High-level screens available in the root horizontal navigation of StandBy Android.
+ *
+ * Screen Architecture:
+ * - [BENTO]: Dual-slot modular bento layout with customizable left/right stacks + edit mode.
+ * - [SINGLE_MODULE]: Dedicated fullscreen single module layout with vertical swipe through all active widgets.
+ * - [HERO_CLOCK]: Immersive full-screen clock gallery (Rectangle Tank clock, Radial, Big Digital, Bauhaus, Flip, Solar Arc).
+ * - [NOW_PLAYING]: Full-screen ambient media player with spinning vinyl disc.
  */
 enum class StandbyScreen(val title: String) {
-    DUAL_WIDGET("Widgets"),
-    HERO_CLOCK("Clock"),
+    BENTO("Bento"),
+    SINGLE_MODULE("Single"),
+    HERO_CLOCK("Clocks"),
     NOW_PLAYING("Music")
 }
 
@@ -22,12 +29,12 @@ enum class WidgetDisplayMode {
 /**
  * Immutable navigation state tracking active screen, widget mode, and expanded slot index.
  *
- * @param currentScreen Currently active horizontal screen ([StandbyScreen.DUAL_WIDGET], [StandbyScreen.HERO_CLOCK], or [StandbyScreen.NOW_PLAYING]).
+ * @param currentScreen Currently active horizontal screen ([StandbyScreen.BENTO], [StandbyScreen.SINGLE_MODULE], [StandbyScreen.HERO_CLOCK], or [StandbyScreen.NOW_PLAYING]).
  * @param displayMode Active widget display layout mode ([WidgetDisplayMode.DUAL] or [WidgetDisplayMode.SINGLE_EXPANDED]).
  * @param expandedSlotIndex Index of the slot that is expanded when in [WidgetDisplayMode.SINGLE_EXPANDED] (0 for left/top slot, 1 for right/bottom slot).
  */
 data class NavigationState(
-    val currentScreen: StandbyScreen = StandbyScreen.DUAL_WIDGET,
+    val currentScreen: StandbyScreen = StandbyScreen.BENTO,
     val displayMode: WidgetDisplayMode = WidgetDisplayMode.DUAL,
     val expandedSlotIndex: Int = 0
 )
