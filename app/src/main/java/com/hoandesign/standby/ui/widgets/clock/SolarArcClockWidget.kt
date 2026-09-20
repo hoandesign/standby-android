@@ -119,7 +119,7 @@ fun SolarArcClockWidget(
     ) {
         val width = maxWidth
         val height = maxHeight
-        val arcCanvasHeight = (height * 0.52f).coerceAtLeast(80.dp)
+        val arcCanvasHeight = (height * 0.44f).coerceIn(60.dp, 160.dp)
 
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -253,7 +253,7 @@ fun SolarArcClockWidget(
             Spacer(modifier = Modifier.height(4.dp))
 
             // 2. Central Digital Time Readout
-            val timeFontSize = (height.value * 0.26f).coerceIn(32f, 72f).sp
+            val timeFontSize = (height.value * 0.22f).coerceIn(24f, 54f).sp
             val hours = time.formattedHours(is24Hour = is24Hour)
             val minutes = time.formattedMinutes()
             val timeString = "$hours:$minutes"

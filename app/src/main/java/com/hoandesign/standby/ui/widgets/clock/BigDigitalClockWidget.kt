@@ -87,27 +87,29 @@ fun BigDigitalClockWidget(
         modifier = modifier
             .fillMaxSize()
             .background(OledBlack)
-            .padding(16.dp),
+            .padding(14.dp),
         contentAlignment = Alignment.Center
     ) {
         val width = maxWidth
         val height = maxHeight
-        val isWide = width > height * 1.5f
+        val isWide = width.value >= height.value * 1.18f
 
         val hoursString = time.formattedHours(is24Hour = is24Hour)
         val minutesString = time.formattedMinutes()
 
         if (isWide) {
-            // Horizontal Wide Layout (e.g. Fullscreen Hero Clock or Wide Slot)
-            val timeFontSize = (height.value * 0.58f).sp
-            val metaFontSize = (height.value * 0.11f).coerceIn(12f, 20f).sp
+            // Horizontal Wide Layout: Single-line "09:41"
+            val maxFontFromWidth = (width.value - 32f) / 2.75f
+            val maxFontFromHeight = (height.value - 54f) * 0.72f
+            val timeFontSize = minOf(maxFontFromWidth, maxFontFromHeight).coerceIn(24f, 160f).sp
+            val metaFontSize = (height.value * 0.08f).coerceIn(10f, 16f).sp
 
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top Header Row: Date Banner
+                // Top Header Row: Date Banner on Left, Alarm on Right
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -130,46 +132,67 @@ fun BigDigitalClockWidget(
                 }
 
                 // Center Massive Digital Digits: "09:41"
-                Text(
-                    text = "$hoursString:$minutesString",
-                    style = TextStyle(
-                        fontFamily = FontFamily.Default,
-                        fontWeight = FontWeight.Black,
-                        fontSize = timeFontSize,
-                        lineHeight = timeFontSize,
-                        letterSpacing = (-0.05).em,
-                        color = activeColor,
-                        textAlign = TextAlign.Center
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "$hoursString:$minutesString",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Black,
+                            fontSize = timeFontSize,
+                            lineHeight = timeFontSize,
+                            letterSpacing = (-0.05).em,
+                            color = activeColor,
+                            textAlign = TextAlign.Center
+                        )
                     )
-                )
+                }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(2.dp))
             }
         } else {
-            // Stacked Vertical Layout (iOS StandBy Dual Card style)
-            // Hours stacked on top of Minutes
-            val digitFontSize = (height.value * 0.38f).coerceAtLeast(44f).sp
-            val metaFontSize = (height.value * 0.085f).coerceIn(11f, 15f).sp
+            // Stacked Vertical Layout: Hours over Minutes, perfectly centered & proportional
+            val maxFontFromWidth = (width.value - 28f) / 1.35f
+            val maxFontFromHeight = (height.value - 64f) / 1.75f
+            val digitFontSize = minOf(maxFontFromWidth, maxFontFromHeight).coerceIn(22f, 130f).sp
+            val metaFontSize = (height.value * 0.075f).coerceIn(10f, 14f).sp
 
             Column(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.SpaceBetween,
-                horizontalAlignment = Alignment.Start
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Top: Date Banner
-                DateBannerChip(
-                    text = dateText,
-                    fontSize = metaFontSize,
-                    isNightMode = isNightMode
-                )
+                // Top Row: Date Banner & Alarm Chips
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DateBannerChip(
+                        text = dateText,
+                        fontSize = metaFontSize,
+                        isNightMode = isNightMode
+                    )
+
+                    if (alarmText.isNotBlank()) {
+                        AlarmIndicatorChip(
+                            alarmText = alarmText,
+                            fontSize = metaFontSize,
+                            tint = activeColor,
+                            isNightMode = isNightMode
+                        )
+                    }
+                }
 
                 // Center: Stacked Digits
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f, fill = false),
+                        .weight(1f),
                     verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.Start
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = hoursString,
@@ -177,9 +200,10 @@ fun BigDigitalClockWidget(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Black,
                             fontSize = digitFontSize,
-                            lineHeight = digitFontSize * 0.88f,
+                            lineHeight = digitFontSize * 0.85f,
                             letterSpacing = (-0.05).em,
-                            color = activeColor
+                            color = activeColor,
+                            textAlign = TextAlign.Center
                         )
                     )
                     Text(
@@ -188,22 +212,15 @@ fun BigDigitalClockWidget(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Black,
                             fontSize = digitFontSize,
-                            lineHeight = digitFontSize * 0.88f,
+                            lineHeight = digitFontSize * 0.85f,
                             letterSpacing = (-0.05).em,
-                            color = activeColor
+                            color = activeColor,
+                            textAlign = TextAlign.Center
                         )
                     )
                 }
 
-                // Bottom: Next Alarm Indicator
-                if (alarmText.isNotBlank()) {
-                    AlarmIndicatorChip(
-                        alarmText = alarmText,
-                        fontSize = metaFontSize,
-                        tint = activeColor,
-                        isNightMode = isNightMode
-                    )
-                }
+                Spacer(modifier = Modifier.height(2.dp))
             }
         }
     }

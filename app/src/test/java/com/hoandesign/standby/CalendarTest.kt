@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import com.hoandesign.standby.model.CalendarEvent
 import com.hoandesign.standby.model.CalendarMonth
 import com.hoandesign.standby.model.formatEventCountdown
+import com.hoandesign.standby.model.formatEventDate
 import com.hoandesign.standby.model.generateMonthGrid
 import com.hoandesign.standby.model.getDaysInMonth
 import com.hoandesign.standby.model.getFirstDayOfWeekOffset
@@ -190,5 +191,32 @@ class CalendarTest {
         assertEquals(0L, event.startEpochMillis)
         assertEquals(0L, event.endEpochMillis)
         assertFalse(event.isAllDay)
+        assertEquals("Today", event.displayDate)
+        assertEquals("TODAY", event.displayTag)
+    }
+
+    @Test
+    fun testFormatEventDate_todayTomorrowAndFuture() {
+        val zone = java.time.ZoneId.of("UTC")
+        val now = java.time.LocalDate.of(2026, 9, 20).atStartOfDay(zone).toInstant().toEpochMilli()
+
+        // Today
+        val (todayFormatted, todayTag) = formatEventDate(now + 3600_000L, zone)
+        assertTrue(todayFormatted.contains("Today"))
+        assertTrue(todayFormatted.contains("Sep 20"))
+        assertEquals("TODAY", todayTag)
+
+        // Tomorrow
+        val tomorrowMillis = now + 86400_000L + 3600_000L
+        val (tomorrowFormatted, tomorrowTag) = formatEventDate(tomorrowMillis, zone)
+        assertTrue(tomorrowFormatted.contains("Tomorrow"))
+        assertTrue(tomorrowFormatted.contains("Sep 21"))
+        assertEquals("TOMORROW", tomorrowTag)
+
+        // Future day (e.g. Sep 23)
+        val futureMillis = now + 3 * 86400_000L + 3600_000L
+        val (futureFormatted, futureTag) = formatEventDate(futureMillis, zone)
+        assertTrue(futureFormatted.contains("Sep 23"))
+        assertEquals("SEP 23", futureTag)
     }
 }

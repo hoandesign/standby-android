@@ -102,12 +102,12 @@ fun AnalogClockWidget(
             val time = clockTime ?: ClockTime.now()
 
             val center = Offset(size.width / 2f, size.height / 2f)
-            val dialRadius = min(size.width, size.height) / 2f * 0.94f
+            val dialRadius = min(size.width, size.height) / 2f * 0.84f
 
             // 1. Draw 60 Dial Ticks (12 major hour ticks, 48 minor minute ticks)
             val hourTickLength = dialRadius * 0.08f
             val minuteTickLength = dialRadius * 0.038f
-            val hourTickStroke = 2.2.dp.toPx()
+            val hourTickStroke = 2.0.dp.toPx()
             val minuteTickStroke = 1.0.dp.toPx()
 
             for (i in 0 until 60) {
@@ -137,7 +137,7 @@ fun AnalogClockWidget(
             }
 
             // 2. Draw 12 Dial Numerals (Bauhaus / Swiss geometric layout)
-            val numeralRadius = dialRadius * 0.76f
+            val numeralRadius = dialRadius * 0.74f
             val numeralFontSize = (dialRadius * 0.098f).sp
 
             val numeralStyle = TextStyle(

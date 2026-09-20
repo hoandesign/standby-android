@@ -111,7 +111,7 @@ fun RadialClockWidget(
                 .aspectRatio(1f)
         ) {
             val center = Offset(size.width / 2f, size.height / 2f)
-            val dialRadius = min(size.width, size.height) / 2f * 0.94f
+            val dialRadius = min(size.width, size.height) / 2f * 0.88f
 
             // 1. Draw Angled Beam Tick Marks
             val beamInnerRadius = dialRadius * 0.60f
@@ -128,7 +128,7 @@ fun RadialClockWidget(
 
                 val startR = if (isHourBeam) beamInnerRadius else minorInnerRadius
                 val endR = beamOuterRadius
-                val strokeWidth = if (isHourBeam) 3.8.dp.toPx() else 1.5.dp.toPx()
+                val strokeWidth = if (isHourBeam) 3.5.dp.toPx() else 1.4.dp.toPx()
                 val color = if (isHourBeam) beamHourColor else beamMinuteColor
 
                 val startX = center.x + (startR * cos(angleRad)).toFloat()
@@ -146,7 +146,7 @@ fun RadialClockWidget(
             }
 
             // 2. Draw Outstretched Cardinal Numerals (12, 3, 6, 9)
-            val numeralFontSize = (dialRadius * 0.22f).sp
+            val numeralFontSize = (dialRadius * 0.20f).sp
             val numeralStyle = TextStyle(
                 fontFamily = FontFamily.Default,
                 fontWeight = FontWeight.Black,
@@ -156,7 +156,7 @@ fun RadialClockWidget(
 
             // "12" Top
             val text12 = textMeasurer.measure("12", style = numeralStyle)
-            val y12 = center.y - dialRadius * 0.76f
+            val y12 = center.y - dialRadius * 0.74f
             drawText(
                 textLayoutResult = text12,
                 topLeft = Offset(center.x - text12.size.width / 2f, y12 - text12.size.height / 2f)
@@ -164,7 +164,7 @@ fun RadialClockWidget(
 
             // "3" Right
             val text3 = textMeasurer.measure("3", style = numeralStyle)
-            val x3 = center.x + dialRadius * 0.78f
+            val x3 = center.x + dialRadius * 0.74f
             drawText(
                 textLayoutResult = text3,
                 topLeft = Offset(x3 - text3.size.width / 2f, center.y - text3.size.height / 2f)
@@ -172,7 +172,7 @@ fun RadialClockWidget(
 
             // "6" Bottom
             val text6 = textMeasurer.measure("6", style = numeralStyle)
-            val y6 = center.y + dialRadius * 0.76f
+            val y6 = center.y + dialRadius * 0.74f
             drawText(
                 textLayoutResult = text6,
                 topLeft = Offset(center.x - text6.size.width / 2f, y6 - text6.size.height / 2f)
@@ -180,7 +180,7 @@ fun RadialClockWidget(
 
             // "9" Left
             val text9 = textMeasurer.measure("9", style = numeralStyle)
-            val x9 = center.x - dialRadius * 0.78f
+            val x9 = center.x - dialRadius * 0.74f
             drawText(
                 textLayoutResult = text9,
                 topLeft = Offset(x9 - text9.size.width / 2f, center.y - text9.size.height / 2f)

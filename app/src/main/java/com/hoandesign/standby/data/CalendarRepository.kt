@@ -119,6 +119,9 @@ class CalendarRepository(
                         Instant.ofEpochMilli(dtEnd).atZone(zoneId).format(timeFormatter)
                     }
 
+                    val (dateStr, dateTag) = com.hoandesign.standby.model.formatEventDate(dtStart, zoneId)
+                    val dayOfWeekStr = Instant.ofEpochMilli(dtStart).atZone(zoneId).dayOfWeek.name.take(3)
+
                     events.add(
                         CalendarEvent(
                             id = id,
@@ -129,7 +132,10 @@ class CalendarRepository(
                             color = eventColor,
                             startEpochMillis = dtStart,
                             endEpochMillis = dtEnd,
-                            isAllDay = allDay
+                            isAllDay = allDay,
+                            dateFormatted = dateStr,
+                            dayOfWeek = dayOfWeekStr,
+                            shortDateTag = dateTag
                         )
                     )
                 }
@@ -166,9 +172,14 @@ class CalendarRepository(
             val start3 = now.plusHours(3)
             val end3 = start3.plusMinutes(60)
 
-            // Event 4: Design System QA (starts in 5h)
-            val start4 = now.plusHours(5)
+            // Event 4: Design System QA (starts tomorrow)
+            val start4 = now.plusDays(1).withHour(10).withMinute(0)
             val end4 = start4.plusHours(1)
+
+            val (date1, tag1) = com.hoandesign.standby.model.formatEventDate(start1.toInstant().toEpochMilli(), zoneId)
+            val (date2, tag2) = com.hoandesign.standby.model.formatEventDate(start2.toInstant().toEpochMilli(), zoneId)
+            val (date3, tag3) = com.hoandesign.standby.model.formatEventDate(start3.toInstant().toEpochMilli(), zoneId)
+            val (date4, tag4) = com.hoandesign.standby.model.formatEventDate(start4.toInstant().toEpochMilli(), zoneId)
 
             return listOf(
                 CalendarEvent(
@@ -179,7 +190,10 @@ class CalendarRepository(
                     location = "Design Lab · Zoom",
                     color = NightRed,
                     startEpochMillis = start1.toInstant().toEpochMilli(),
-                    endEpochMillis = end1.toInstant().toEpochMilli()
+                    endEpochMillis = end1.toInstant().toEpochMilli(),
+                    dateFormatted = date1,
+                    dayOfWeek = start1.dayOfWeek.name.take(3),
+                    shortDateTag = tag1
                 ),
                 CalendarEvent(
                     id = 102L,
@@ -189,7 +203,10 @@ class CalendarRepository(
                     location = "Meeting Room 4B",
                     color = AccentBlue,
                     startEpochMillis = start2.toInstant().toEpochMilli(),
-                    endEpochMillis = end2.toInstant().toEpochMilli()
+                    endEpochMillis = end2.toInstant().toEpochMilli(),
+                    dateFormatted = date2,
+                    dayOfWeek = start2.dayOfWeek.name.take(3),
+                    shortDateTag = tag2
                 ),
                 CalendarEvent(
                     id = 103L,
@@ -199,7 +216,10 @@ class CalendarRepository(
                     location = "Virtual / Hangouts",
                     color = AccentOrange,
                     startEpochMillis = start3.toInstant().toEpochMilli(),
-                    endEpochMillis = end3.toInstant().toEpochMilli()
+                    endEpochMillis = end3.toInstant().toEpochMilli(),
+                    dateFormatted = date3,
+                    dayOfWeek = start3.dayOfWeek.name.take(3),
+                    shortDateTag = tag3
                 ),
                 CalendarEvent(
                     id = 104L,
@@ -209,7 +229,10 @@ class CalendarRepository(
                     location = "Figma Review Suite",
                     color = AccentPurple,
                     startEpochMillis = start4.toInstant().toEpochMilli(),
-                    endEpochMillis = end4.toInstant().toEpochMilli()
+                    endEpochMillis = end4.toInstant().toEpochMilli(),
+                    dateFormatted = date4,
+                    dayOfWeek = start4.dayOfWeek.name.take(3),
+                    shortDateTag = tag4
                 )
             )
         }

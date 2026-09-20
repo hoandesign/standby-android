@@ -154,6 +154,30 @@ data class CalendarMonth(
 }
 
 /**
+ * Formats date metadata for an event based on its epoch timestamp.
+ * Returns Pair(displayDate, shortDateTag)
+ * e.g. Pair("Today, Sep 20", "TODAY"), Pair("Tomorrow, Sep 21", "TOMORROW"), Pair("Mon, Sep 22", "SEP 22").
+ */
+fun formatEventDate(
+    startEpochMillis: Long,
+    zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+): Pair<String, String> {
+    if (startEpochMillis <= 0L) return Pair("Today", "TODAY")
+    val eventDate = java.time.Instant.ofEpochMilli(startEpochMillis).atZone(zoneId).toLocalDate()
+    val today = java.time.LocalDate.now(zoneId)
+    val tomorrow = today.plusDays(1)
+
+    val shortFormatter = java.time.format.DateTimeFormatter.ofPattern("MMM d", Locale.US)
+    val dayOfWeekFormatter = java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d", Locale.US)
+
+    return when (eventDate) {
+        today -> Pair("Today, ${eventDate.format(shortFormatter)}", "TODAY")
+        tomorrow -> Pair("Tomorrow, ${eventDate.format(shortFormatter)}", "TOMORROW")
+        else -> Pair(eventDate.format(dayOfWeekFormatter), eventDate.format(shortFormatter).uppercase(Locale.US))
+    }
+}
+
+/**
  * Represents an individual calendar meeting or event.
  *
  * @param id Unique identifier.
@@ -165,6 +189,9 @@ data class CalendarMonth(
  * @param startEpochMillis Start timestamp in milliseconds.
  * @param endEpochMillis End timestamp in milliseconds.
  * @param isAllDay True if the event spans the entire day.
+ * @param dateFormatted Human-readable date string (e.g. "Today, Sep 20" or "Tomorrow, Sep 21").
+ * @param dayOfWeek Short day of week string (e.g. "MON", "TUE").
+ * @param shortDateTag Micro pill tag (e.g. "TODAY", "TOMORROW", "SEP 22").
  */
 data class CalendarEvent(
     val id: Long,
@@ -175,5 +202,14 @@ data class CalendarEvent(
     val color: Color = Color(0xFFFF453A),
     val startEpochMillis: Long = 0L,
     val endEpochMillis: Long = 0L,
-    val isAllDay: Boolean = false
-)
+    val isAllDay: Boolean = false,
+    val dateFormatted: String = "",
+    val dayOfWeek: String = "",
+    val shortDateTag: String = ""
+) {
+    val displayDate: String
+        get() = if (dateFormatted.isNotBlank()) dateFormatted else formatEventDate(startEpochMillis).first
+
+    val displayTag: String
+        get() = if (shortDateTag.isNotBlank()) shortDateTag else formatEventDate(startEpochMillis).second
+}

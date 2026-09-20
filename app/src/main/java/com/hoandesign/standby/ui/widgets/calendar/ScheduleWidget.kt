@@ -198,22 +198,38 @@ private fun NextEventBanner(
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Top Header: Label + Countdown Pill
+        // Top Header: Label + Date + Countdown Pill
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "UP NEXT",
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 10.sp,
-                    letterSpacing = 0.08.em,
-                    color = if (isNightMode) NightRed else TextTertiary
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = "UP NEXT",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.08.em,
+                        color = if (isNightMode) NightRed else TextTertiary
+                    )
                 )
-            )
+                Text(
+                    text = "·  ${event.displayDate}",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 10.sp,
+                        color = if (isNightMode) Color(0xCCFF453A) else TextSecondary
+                    ),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
             // Countdown Pill
             Box(
@@ -311,7 +327,7 @@ private fun TimelineEventRow(
         Box(
             modifier = Modifier
                 .width(3.5.dp)
-                .height(32.dp)
+                .height(34.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(barColor)
         )
@@ -336,8 +352,28 @@ private fun TimelineEventRow(
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                // Micro date pill (e.g. "TODAY", "TOMORROW", "SEP 22")
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (isNightMode) Color(0x22FF453A) else StandbyCardBgSecondary)
+                        .border(0.5.dp, if (isNightMode) Color(0x44FF453A) else StandbyBorder, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                ) {
+                    Text(
+                        text = event.displayTag,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 9.sp,
+                            letterSpacing = 0.04.em,
+                            color = if (isNightMode) NightRed else TextSecondary
+                        )
+                    )
+                }
+
                 Text(
                     text = "${event.startTimeFormatted} - ${event.endTimeFormatted}",
                     style = TextStyle(
@@ -353,7 +389,7 @@ private fun TimelineEventRow(
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontSize = 11.sp,
-                            color = if (isNightMode) Color(0x55FF453A) else TextTertiary
+                            color = if (isNightMode) Color(0x66FF453A) else TextTertiary
                         )
                     )
                     Text(

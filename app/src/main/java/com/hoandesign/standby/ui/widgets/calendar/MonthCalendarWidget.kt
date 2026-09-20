@@ -64,14 +64,14 @@ fun MonthCalendarWidget(
         modifier = modifier
             .fillMaxSize()
             .background(OledBlack)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 12.dp),
         contentAlignment = Alignment.Center
     ) {
         val availableHeight = maxHeight
-        val titleFontSize = (availableHeight.value * 0.10f).coerceIn(14f, 20f).sp
-        val headerFontSize = (availableHeight.value * 0.065f).coerceIn(10f, 13f).sp
-        val dateFontSize = (availableHeight.value * 0.075f).coerceIn(11f, 14f).sp
-        val pillSize = (availableHeight.value * 0.13f).coerceIn(24f, 30f).dp
+        val titleFontSize = (availableHeight.value * 0.085f).coerceIn(12f, 18f).sp
+        val headerFontSize = (availableHeight.value * 0.055f).coerceIn(9f, 12f).sp
+        val dateFontSize = (availableHeight.value * 0.065f).coerceIn(10f, 13f).sp
+        val pillSize = (availableHeight.value * 0.10f).coerceIn(20f, 28f).dp
 
         val weeks = remember(month) { month.grid.chunked(7) }
 

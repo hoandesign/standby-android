@@ -106,4 +106,37 @@ class AdaptiveLayoutTest {
         val negativeHeight = determineLayoutArchetype(1080f, -500f)
         assertEquals(LayoutArchetype.STANDARD_LANDSCAPE, negativeHeight)
     }
+
+    @Test
+    fun testMultiScreenRatioAndOrientationScenarios() {
+        // 1. 3:4 portrait screen (e.g. tablet or foldable cover portrait, 768x1024 -> aspect 0.75f)
+        val ratio3by4 = determineLayoutArchetype(768f, 1024f)
+        assertEquals(LayoutArchetype.TALL_PORTRAIT, ratio3by4)
+        assertFalse(ratio3by4.isLandscape)
+
+        // 2. 4:3 landscape screen (e.g. iPad / Android 4:3 tablet landscape, 1024x768 -> aspect 1.333f)
+        // Ratio 1.333f falls in 0.85f..<1.35f -> SQUARISH_FOLDABLE
+        val ratio4by3 = determineLayoutArchetype(1024f, 768f)
+        assertEquals(LayoutArchetype.SQUARISH_FOLDABLE, ratio4by3)
+
+        // 3. 1:1 square screen (e.g. 1000x1000 -> aspect 1.0f)
+        val square1by1 = determineLayoutArchetype(1000f, 1000f)
+        assertEquals(LayoutArchetype.SQUARISH_FOLDABLE, square1by1)
+        assertFalse(square1by1.isLandscape)
+
+        // 4. 9:20 tall portrait smartphone (e.g. Pixel 9 / Galaxy S24 in portrait, 1080x2400 -> aspect 0.45f)
+        val tallPhone9by20 = determineLayoutArchetype(1080f, 2400f)
+        assertEquals(LayoutArchetype.TALL_PORTRAIT, tallPhone9by20)
+        assertFalse(tallPhone9by20.isLandscape)
+
+        // 5. 16:9 standard landscape stand (e.g. docked landscape, 1920x1080 -> aspect 1.777f)
+        val landscape16by9 = determineLayoutArchetype(1920f, 1080f)
+        assertEquals(LayoutArchetype.STANDARD_LANDSCAPE, landscape16by9)
+        assertTrue(landscape16by9.isLandscape)
+
+        // 6. 20:9 ultra-wide landscape (e.g. 2400x1080 -> aspect 2.222f)
+        val ultraWideLandscape = determineLayoutArchetype(2400f, 1080f)
+        assertEquals(LayoutArchetype.ULTRA_TALL_LANDSCAPE, ultraWideLandscape)
+        assertTrue(ultraWideLandscape.isLandscape)
+    }
 }

@@ -15,6 +15,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -22,6 +25,10 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -152,12 +159,29 @@ fun MainStandbyPager(
     )
 
     val haptic = LocalHapticFeedback.current
+    val coroutineScope = rememberCoroutineScope()
+    var isNavVisible by remember { mutableStateOf(true) }
+    var lastInteractionTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
+
+    fun recordInteraction() {
+        lastInteractionTime = System.currentTimeMillis()
+        isNavVisible = true
+    }
+
+    // Auto-hide navigation menu after 4.5s of inactivity when not in edit mode
+    LaunchedEffect(isNavVisible, lastInteractionTime, isEditMode) {
+        if (isNavVisible && !isEditMode) {
+            delay(4500L)
+            isNavVisible = false
+        }
+    }
 
     // Snap haptic feedback on vertical stack page change (Left slot)
     LaunchedEffect(leftPagerState) {
         snapshotFlow { leftPagerState.currentPage }
             .drop(1)
             .collect {
+                recordInteraction()
                 try {
                     haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                 } catch (e: Throwable) {
@@ -171,6 +195,7 @@ fun MainStandbyPager(
         snapshotFlow { rightPagerState.currentPage }
             .drop(1)
             .collect {
+                recordInteraction()
                 try {
                     haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                 } catch (e: Throwable) {
@@ -184,6 +209,7 @@ fun MainStandbyPager(
         snapshotFlow { horizontalPagerState.currentPage }
             .drop(1)
             .collect {
+                recordInteraction()
                 try {
                     haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                 } catch (e: Throwable) {
@@ -218,6 +244,11 @@ fun MainStandbyPager(
         modifier = modifier
             .fillMaxSize()
             .background(StandbyBackground)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { recordInteraction() }
+                )
+            }
     ) {
         HorizontalPager(
             state = horizontalPagerState,
@@ -239,72 +270,87 @@ fun MainStandbyPager(
                     ) { mode ->
                         when (mode) {
                             WidgetDisplayMode.DUAL -> {
-                                Column(
-                                    modifier = Modifier.fillMaxSize()
-                                ) {
-                                    // Dedicated StandBy Top Status Bar
-                                    StandbyTopBar(
-                                        isEditMode = isEditMode,
-                                        accentColor = accentColor,
-                                        onToggleEditMode = onToggleEditMode,
-                                        onOpenSettings = onOpenSettings
-                                    )
+                                val isPortrait = archetype == LayoutArchetype.TALL_PORTRAIT
+                                val slot1Title = if (isPortrait) "TOP BENTO" else "LEFT BENTO"
+                                val slot2Title = if (isPortrait) "BOTTOM BENTO" else "RIGHT BENTO"
 
-                                    // Dual Bento Slots Container
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                    ) {
-                                        val isPortrait = archetype == LayoutArchetype.TALL_PORTRAIT
-                                        val slot1Title = if (isPortrait) "TOP BENTO" else "LEFT BENTO"
-                                        val slot2Title = if (isPortrait) "BOTTOM BENTO" else "RIGHT BENTO"
-
-                                        AdaptiveStandbyLayout(
-                                            slot1 = {
-                                                DynamicSlotCard(
-                                                    slotIndex = 0,
-                                                    slotTitle = slot1Title,
-                                                    widgetIds = safeLeftIds,
-                                                    pagerState = leftPagerState,
-                                                    accentColor = accentColor,
-                                                    isEditMode = isEditMode,
-                                                    onOpenWidgetPicker = { onOpenWidgetPicker(0) },
-                                                    onRemoveWidget = { idx -> onRemoveWidgetFromSlot(0, idx) },
-                                                    onToggleExpand = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        if (isEditMode) onToggleEditMode()
-                                                        updateNavigationState(navigationState.expandSlot(0))
-                                                    },
-                                                    onExitEditMode = onToggleEditMode,
-                                                    onReorderWidgets = { from, to -> onReorderSlotWidgets(0, from, to) },
-                                                    onResetDefaults = { onResetSlotDefaults(0) }
-                                                )
+                                AdaptiveStandbyLayout(
+                                    slot1 = {
+                                        DynamicSlotCard(
+                                            slotIndex = 0,
+                                            slotTitle = slot1Title,
+                                            widgetIds = safeLeftIds,
+                                            pagerState = leftPagerState,
+                                            accentColor = accentColor,
+                                            isEditMode = isEditMode,
+                                            onOpenWidgetPicker = {
+                                                recordInteraction()
+                                                onOpenWidgetPicker(0)
                                             },
-                                            slot2 = {
-                                                DynamicSlotCard(
-                                                    slotIndex = 1,
-                                                    slotTitle = slot2Title,
-                                                    widgetIds = safeRightIds,
-                                                    pagerState = rightPagerState,
-                                                    accentColor = accentColor,
-                                                    isEditMode = isEditMode,
-                                                    onOpenWidgetPicker = { onOpenWidgetPicker(1) },
-                                                    onRemoveWidget = { idx -> onRemoveWidgetFromSlot(1, idx) },
-                                                    onToggleExpand = {
-                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                        if (isEditMode) onToggleEditMode()
-                                                        updateNavigationState(navigationState.expandSlot(1))
-                                                    },
-                                                    onExitEditMode = onToggleEditMode,
-                                                    onReorderWidgets = { from, to -> onReorderSlotWidgets(1, from, to) },
-                                                    onResetDefaults = { onResetSlotDefaults(1) }
-                                                )
+                                            onRemoveWidget = { idx ->
+                                                recordInteraction()
+                                                onRemoveWidgetFromSlot(0, idx)
                                             },
-                                            modifier = Modifier.fillMaxSize()
+                                            onToggleExpand = {
+                                                recordInteraction()
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                if (isEditMode) onToggleEditMode()
+                                                updateNavigationState(navigationState.expandSlot(0))
+                                            },
+                                            onExitEditMode = {
+                                                recordInteraction()
+                                                onToggleEditMode()
+                                            },
+                                            onReorderWidgets = { from, to ->
+                                                recordInteraction()
+                                                onReorderSlotWidgets(0, from, to)
+                                            },
+                                            onResetDefaults = {
+                                                recordInteraction()
+                                                onResetSlotDefaults(0)
+                                            },
+                                            onUserInteraction = { recordInteraction() }
                                         )
-                                    }
-                                }
+                                    },
+                                    slot2 = {
+                                        DynamicSlotCard(
+                                            slotIndex = 1,
+                                            slotTitle = slot2Title,
+                                            widgetIds = safeRightIds,
+                                            pagerState = rightPagerState,
+                                            accentColor = accentColor,
+                                            isEditMode = isEditMode,
+                                            onOpenWidgetPicker = {
+                                                recordInteraction()
+                                                onOpenWidgetPicker(1)
+                                            },
+                                            onRemoveWidget = { idx ->
+                                                recordInteraction()
+                                                onRemoveWidgetFromSlot(1, idx)
+                                            },
+                                            onToggleExpand = {
+                                                recordInteraction()
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                if (isEditMode) onToggleEditMode()
+                                                updateNavigationState(navigationState.expandSlot(1))
+                                            },
+                                            onExitEditMode = {
+                                                recordInteraction()
+                                                onToggleEditMode()
+                                            },
+                                            onReorderWidgets = { from, to ->
+                                                recordInteraction()
+                                                onReorderSlotWidgets(1, from, to)
+                                            },
+                                            onResetDefaults = {
+                                                recordInteraction()
+                                                onResetSlotDefaults(1)
+                                            },
+                                            onUserInteraction = { recordInteraction() }
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                )
                             }
                             WidgetDisplayMode.SINGLE_EXPANDED -> {
                                 // True Edge-to-Edge Fullscreen Single Slot Feature
@@ -322,7 +368,9 @@ fun MainStandbyPager(
                                         .fillMaxSize()
                                         .pointerInput(Unit) {
                                             detectTapGestures(
+                                                onTap = { recordInteraction() },
                                                 onDoubleTap = {
+                                                    recordInteraction()
                                                     haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                     updateNavigationState(navigationState.collapseToDual())
                                                 }
@@ -345,6 +393,7 @@ fun MainStandbyPager(
                                             .background(StandbyCardBgSecondary.copy(alpha = 0.88f))
                                             .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(16.dp))
                                             .clickable {
+                                                recordInteraction()
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 updateNavigationState(navigationState.collapseToDual())
                                             }
@@ -375,7 +424,11 @@ fun MainStandbyPager(
                 }
                 StandbyScreen.HERO_CLOCK -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(onTap = { recordInteraction() })
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         heroClockContent()
@@ -383,7 +436,11 @@ fun MainStandbyPager(
                 }
                 StandbyScreen.NOW_PLAYING -> {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(onTap = { recordInteraction() })
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         nowPlayingContent()
@@ -392,14 +449,72 @@ fun MainStandbyPager(
             }
         }
 
+        // Floating Auto-Hiding Top Navigation Menu
+        StandbyTopNavigationMenu(
+            visible = isNavVisible || isEditMode,
+            currentScreen = screens[horizontalPagerState.currentPage],
+            isEditMode = isEditMode,
+            accentColor = accentColor,
+            onSelectScreen = { targetScreen ->
+                recordInteraction()
+                coroutineScope.launch {
+                    horizontalPagerState.animateScrollToPage(targetScreen.ordinal)
+                }
+            },
+            onToggleEditMode = {
+                recordInteraction()
+                onToggleEditMode()
+            },
+            onOpenSettings = {
+                recordInteraction()
+                onOpenSettings()
+            },
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 10.dp, start = 16.dp, end = 16.dp)
+        )
+
+        // Subtle Top Pill Handle (when navigation is hidden, gives subtle hint to tap to show)
+        AnimatedVisibility(
+            visible = !isNavVisible && !isEditMode,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 8.dp)
+                .zIndex(15f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color(0x33FFFFFF))
+                    .clickable { recordInteraction() }
+                    .padding(horizontal = 14.dp, vertical = 6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .width(36.dp)
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x88FFFFFF))
+                )
+            }
+        }
+
         // Sleek iOS-style horizontal page indicator anchored at bottom edge
-        HorizontalPagerIndicator(
-            pageCount = screens.size,
-            currentPage = horizontalPagerState.currentPage,
+        AnimatedVisibility(
+            visible = isNavVisible || isEditMode,
+            enter = fadeIn(),
+            exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 12.dp)
-        )
+        ) {
+            HorizontalPagerIndicator(
+                pageCount = screens.size,
+                currentPage = horizontalPagerState.currentPage
+            )
+        }
     }
 }
 
@@ -522,6 +637,7 @@ private fun DynamicSlotCard(
     onExitEditMode: () -> Unit,
     onReorderWidgets: ((Int, Int) -> Unit)? = null,
     onResetDefaults: (() -> Unit)? = null,
+    onUserInteraction: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -532,8 +648,15 @@ private fun DynamicSlotCard(
             .pointerInput(Unit) {
                 if (!isEditMode) {
                     detectTapGestures(
-                        onDoubleTap = { onToggleExpand() },
-                        onLongPress = { onToggleExpand() }
+                        onTap = { onUserInteraction() },
+                        onDoubleTap = {
+                            onUserInteraction()
+                            onToggleExpand()
+                        },
+                        onLongPress = {
+                            onUserInteraction()
+                            onToggleExpand()
+                        }
                     )
                 }
             }
@@ -690,124 +813,191 @@ private fun WidgetSlotStack(
 }
 
 /**
- * Dedicated StandBy top status bar displayed exclusively in Dual Bento mode.
+ * Auto-hiding top navigation menu floating over the fullscreen Bento box.
  *
  * Provides:
- * - Clean "STANDBY" uppercase tracking micro-label with subtle "EDITING" badge when in edit mode.
- * - Right-aligned controls: prominent [ Done ] pill when editing; [ Customize ] and [ Settings ]
- *   when in normal viewing mode.
- * - Perfectly positioned above the bento cards with zero occlusion or overlap.
+ * - STANDBY brand micro-label / EDITING status badge.
+ * - Quick-jump tabs for [ Bento ] [ Clock ] [ Music ] screens.
+ * - Contextual action controls: [ Done ] during Edit Mode; [ Edit ] and [ Settings ] during viewing mode.
+ * - Smooth slide-in/slide-out animations and auto-hide on inactivity.
  */
 @Composable
-private fun StandbyTopBar(
+private fun StandbyTopNavigationMenu(
+    visible: Boolean,
+    currentScreen: StandbyScreen,
     isEditMode: Boolean,
     accentColor: Color,
+    onSelectScreen: (StandbyScreen) -> Unit,
     onToggleEditMode: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    AnimatedVisibility(
+        visible = visible,
+        enter = slideInVertically(
+            initialOffsetY = { -it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeIn(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+        exit = slideOutVertically(
+            targetOffsetY = { -it },
+            animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+        ) + fadeOut(animationSpec = spring(stiffness = Spring.StiffnessMediumLow)),
+        modifier = modifier.zIndex(20f)
     ) {
-        // Left: Clean Apple StandBy brand micro-title
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = "STANDBY",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                letterSpacing = 2.sp,
-                color = TextTertiary
-            )
-
-            if (isEditMode) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(accentColor.copy(alpha = 0.2f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+        if (isEditMode) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(StandbyCardBgSecondary.copy(alpha = 0.94f))
+                    .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(20.dp))
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(
-                        text = "EDITING",
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.8.sp,
-                        color = accentColor
-                    )
-                }
-            }
-        }
-
-        // Right: Contextual Controls (Done when editing; Customize & Settings when viewing)
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (isEditMode) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accentColor)
-                        .clickable { onToggleEditMode() }
-                        .padding(horizontal = 14.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "Done",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                }
-            } else {
-                // Customize button
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
-                        .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(14.dp))
-                        .clickable { onToggleEditMode() }
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(accentColor.copy(alpha = 0.2f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Tune,
-                            contentDescription = "Customize Bento",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(13.dp)
-                        )
                         Text(
-                            text = "Customize",
+                            text = "EDITING BENTO",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.8.sp,
+                            color = accentColor
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accentColor)
+                            .clickable { onToggleEditMode() }
+                            .padding(horizontal = 14.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "Done",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextSecondary
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
                         )
                     }
                 }
-
-                // Settings gear button
-                Box(
-                    modifier = Modifier
-                        .clip(CircleShape)
-                        .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
-                        .border(1.dp, StandbyBorderSubtle, CircleShape)
-                        .clickable { onOpenSettings() }
-                        .padding(6.dp)
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(StandbyCardBgSecondary.copy(alpha = 0.94f))
+                    .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(22.dp))
+                    .padding(horizontal = 12.dp, vertical = 5.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Quick Settings",
-                        tint = TextSecondary.copy(alpha = 0.85f),
-                        modifier = Modifier.size(15.dp)
+                    // Left: STANDBY brand title
+                    Text(
+                        text = "STANDBY",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.8.sp,
+                        color = TextTertiary
                     )
+
+                    // Center: Screen Navigation Tabs ([ Bento ] [ Clock ] [ Music ])
+                    Row(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color(0x22FFFFFF))
+                            .padding(2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        StandbyScreen.entries.forEach { screen ->
+                            val isSelected = currentScreen == screen
+                            val tabTitle = when (screen) {
+                                StandbyScreen.DUAL_WIDGET -> "Bento"
+                                StandbyScreen.HERO_CLOCK -> "Clock"
+                                StandbyScreen.NOW_PLAYING -> "Music"
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isSelected) StandbyCardBg.copy(alpha = 0.95f) else Color.Transparent
+                                    )
+                                    .border(
+                                        width = if (isSelected) 0.5.dp else 0.dp,
+                                        color = if (isSelected) StandbyBorderSubtle else Color.Transparent,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable { onSelectScreen(screen) }
+                                    .padding(horizontal = 9.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    text = tabTitle,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) TextPrimary else TextSecondary
+                                )
+                            }
+                        }
+                    }
+
+                    // Right: Contextual Controls (Edit button when on Bento page, Settings icon)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (currentScreen == StandbyScreen.DUAL_WIDGET) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0x22FFFFFF))
+                                    .clickable { onToggleEditMode() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Tune,
+                                        contentDescription = "Customize",
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Text(
+                                        text = "Edit",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        // Settings Icon
+                        Box(
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(Color(0x22FFFFFF))
+                                .clickable { onOpenSettings() }
+                                .padding(5.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
