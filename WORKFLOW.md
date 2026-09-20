@@ -95,6 +95,11 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
       3. **Data Boundary & Edge Math:** Fallback states (GPS denied, initial network load) must be tested with edge numerical inputs (e.g. `0` high/low values must never calculate `-17°C`).
       4. **Dynamic Typography Bounds:** All dynamic strings (city names, track titles, condition labels) must enforce single-line constraints (`maxLines = 1`) and ellipsis truncation (`TextOverflow.Ellipsis`) to prevent layout-push cascades.
 
+12. **Mandatory Planning, Live Task Tracking & Adversarial Grill Loop:**
+    * **Plan & Task List First:** Before writing or modifying any code, the agent MUST explicitly research and author a concrete implementation plan with a granular task list stored in `PLAN.md` (or artifact). Never code blindly or start implementation without a defined roadmap.
+    * **Live Task Tracking & Transparent Progress:** The agent must actively track task execution status (`[ ] Pending`, `[▶] In Progress`, `[✔] Completed`) and present progress updates to the user as milestones are reached.
+    * **Careful Adversarial Subagent Grill Loop:** The auditor is an active gatekeeper in a closed loop. If the auditor finds ANY defect (verdict FAIL or score < 9.5), the agent MUST loop back, patch the root cause, and re-trigger the adversarial auditor until a genuine, proven PASS is achieved.
+
 ---
 
 ## 2. The 6-Step Autonomous "Do-Loop"
@@ -103,19 +108,22 @@ When executing any task or enhancement, the assistant follows this continuous 6-
 
 ```mermaid
 flowchart TD
-    A["Step 1: Ground in User Goals & Feedback"] --> B["Step 2: Architecture & Code Implementation"]
+    A["Step 1: Research, Design & Planning (PLAN.md Task List)"] --> B["Step 2: Live Task Tracking & Architecture Implementation"]
     B --> C["Step 3: Local Verification (Unit Tests & Release Build)"]
     C --> D["Step 4: Physical Device Testing (Firebase Test Lab)"]
-    D --> E["Step 5: Blind Independent Auditor (Zero-Bias Grilling)"]
-    E -->|Score < 9.5 or Defects Found| B
-    E -->|Score >= 9.5 & Approved| F["Step 6: Automated Play Store Rollout & Git Push"]
+    D --> E["Step 5: Blind Adversarial Auditor Grill Loop"]
+    E -->|Score < 9.5 or Defects Found (FAIL)| B
+    E -->|Score >= 9.5 & Validated (PASS)| F["Step 6: Automated Play Store Rollout & Git Push"]
 ```
 
-### Step 1: Goal Grounding & Feedback Verification
-* Review user feedback, previous defect reports, and original design goals.
-* Avoid band-aid fixes or cosmetic shortcuts. Fix root causes at the architectural level.
+### Step 1: Research, Design & Planning (Task List First)
+* Review user requests, complaints, and design references with deep sequential thinking.
+* Author or update `PLAN.md` directly in the project directory before touching code.
+* Break down the work into discrete, testable items with clear success criteria.
+* Present the proposed plan and task list to the user with transparent progress tracking.
 
-### Step 2: Modular Implementation & Clean Refactoring
+### Step 2: Live Task Tracking & Modular Implementation
+* Maintain an active progress tracker (`[ ] Pending`, `[▶] In Progress`, `[✔] Done`) and report status updates to the user as tasks advance.
 * Keep files focused and modular (< 500 lines per file).
 * Separate concerns: coordinator (`MainStandbyPager.kt`), top bar (`StandbyTopNavigationMenu.kt`), slot container (`DynamicSlotCard.kt`), and edit stack (`EditModeWidgetStack.kt`).
 
@@ -167,7 +175,14 @@ To ensure the audit is never biased by developer claims or superficial checklist
    * Battery Efficiency & OLED Protection (0–10)
    * Production Readiness (0–10)
    * *Rule:* A 10/10 score is forbidden unless code line references and visual proof demonstrate zero defects across all 4 stress-test domains.
-6. **Hard Gate:** If the overall score is below **9.5 / 10** or ANY visual collision/defect is found, the loop routes back to Step 2 for immediate patching.
+6. **The Adversarial Grilling Loop (Continuous Iterative Refinement):**
+   * If the auditor identifies ANY defect, awards an overall score below **9.5 / 10**, or issues a **FAIL** verdict:
+     1. The assistant must immediately log the specific failure points in the turn record.
+     2. Route directly back to Step 2 to patch the root cause, updating the live task tracker.
+     3. Re-execute local unit tests (`./gradlew test`) and release compilation.
+     4. Re-prompt the adversarial auditor with `scripts/auditor_prompt_template.md` to re-test the failure domains.
+     5. The loop repeats until the auditor certifies an authentic, evidence-backed **PASS**.
+   * Under NO circumstances may a build be packaged or shipped to Google Play while the auditor gate remains in a FAIL state.
 
 ### Step 6: Automated Google Play Rollout & Git Sync
 * Upload the signed release bundle directly to the Google Play Console `internal` testing track:
