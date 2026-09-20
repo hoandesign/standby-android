@@ -68,11 +68,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 try {
                     val prefName = prefs.getString(
                         ChargingReceiver.KEY_NIGHT_MODE_PREFERENCE,
-                        NightModePreference.AUTO.name
+                        NightModePreference.DISABLED.name
                     )
-                    NightModePreference.valueOf(prefName ?: NightModePreference.AUTO.name)
+                    NightModePreference.valueOf(prefName ?: NightModePreference.DISABLED.name)
                 } catch (e: Exception) {
-                    NightModePreference.AUTO
+                    NightModePreference.DISABLED
                 }
             }
 

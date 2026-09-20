@@ -143,7 +143,6 @@ fun MusicPlayerWidget(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(OledBlack)
             .padding(14.dp)
     ) {
         val compactMode = isCompact ?: (maxWidth < 420.dp)

@@ -18,7 +18,7 @@ enum class NightModePreference {
  */
 data class NightModeState(
     val isNightModeActive: Boolean = false,
-    val preference: NightModePreference = NightModePreference.AUTO,
+    val preference: NightModePreference = NightModePreference.DISABLED,
     val ambientLux: Float = 50f
 ) {
     companion object {
@@ -46,7 +46,7 @@ data class NightModeState(
          */
         fun fromLux(
             ambientLux: Float,
-            preference: NightModePreference = NightModePreference.AUTO
+            preference: NightModePreference = NightModePreference.DISABLED
         ): NightModeState {
             return NightModeState(
                 isNightModeActive = computeIsNightModeActive(preference, ambientLux),

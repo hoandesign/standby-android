@@ -55,6 +55,8 @@ class ChargingReceiver : BroadcastReceiver() {
         const val KEY_AUTO_LAUNCH_ON_DOCK = "auto_launch_on_dock"
         const val KEY_NIGHT_MODE_PREFERENCE = "night_mode_preference"
         const val KEY_ACCENT_COLOR = "accent_color"
+        const val KEY_LEFT_SLOT_WIDGETS = "left_slot_widgets"
+        const val KEY_RIGHT_SLOT_WIDGETS = "right_slot_widgets"
 
         /**
          * Companion object reference to [com.hoandesign.standby.receiver.shouldAutoLaunchStandBy].

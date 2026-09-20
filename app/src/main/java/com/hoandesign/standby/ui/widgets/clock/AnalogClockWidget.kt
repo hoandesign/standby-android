@@ -96,8 +96,7 @@ fun AnalogClockWidget(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(dialBackgroundColor)
-            .padding(12.dp),
+            .padding(10.dp),
         contentAlignment = Alignment.Center
     ) {
         Canvas(
@@ -109,10 +108,10 @@ fun AnalogClockWidget(
             val dialRadius = min(size.width, size.height) / 2f * 0.94f
 
             // 1. Draw 60 Dial Ticks (12 major hour ticks, 48 minor minute ticks)
-            val hourTickLength = dialRadius * 0.09f
-            val minuteTickLength = dialRadius * 0.045f
-            val hourTickStroke = 3.2.dp.toPx()
-            val minuteTickStroke = 1.4.dp.toPx()
+            val hourTickLength = dialRadius * 0.08f
+            val minuteTickLength = dialRadius * 0.038f
+            val hourTickStroke = 2.2.dp.toPx()
+            val minuteTickStroke = 1.0.dp.toPx()
 
             for (i in 0 until 60) {
                 val isHour = i % 5 == 0
@@ -141,12 +140,12 @@ fun AnalogClockWidget(
             }
 
             // 2. Draw 12 Dial Numerals (Bauhaus / Swiss geometric layout)
-            val numeralRadius = dialRadius * 0.74f
-            val numeralFontSize = (dialRadius * 0.13f).sp
+            val numeralRadius = dialRadius * 0.76f
+            val numeralFontSize = (dialRadius * 0.098f).sp
 
             val numeralStyle = TextStyle(
                 fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.SemiBold,
                 fontSize = numeralFontSize,
                 color = numeralColor
             )
@@ -172,21 +171,21 @@ fun AnalogClockWidget(
                 )
             }
 
-            // 3. Draw City / Timezone Label (e.g. "CUPERTINO")
+            // 3. Draw City / Timezone Label placed elegantly above center pivot
             if (cityName.isNotBlank()) {
-                val cityFontSize = (dialRadius * 0.065f).sp
+                val cityFontSize = (dialRadius * 0.052f).sp
                 val cityStyle = TextStyle(
                     fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Medium,
                     fontSize = cityFontSize,
                     color = cityLabelColor,
-                    letterSpacing = 0.12.sp
+                    letterSpacing = 0.14.sp
                 )
                 val cityLayout = textMeasurer.measure(
                     text = cityName.uppercase(),
                     style = cityStyle
                 )
-                val cityY = center.y + dialRadius * 0.36f
+                val cityY = center.y - dialRadius * 0.28f
                 drawText(
                     textLayoutResult = cityLayout,
                     topLeft = Offset(

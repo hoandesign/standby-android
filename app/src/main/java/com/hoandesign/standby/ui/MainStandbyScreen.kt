@@ -1,5 +1,6 @@
 package com.hoandesign.standby.ui
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,8 +29,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,14 +48,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hoandesign.standby.model.NightModePreference
 import com.hoandesign.standby.model.NightModeState
+import com.hoandesign.standby.model.StandbyWidgetId
+import com.hoandesign.standby.model.StandbyWidgetRegistry
+import com.hoandesign.standby.receiver.ChargingReceiver
 import com.hoandesign.standby.ui.components.NightModeFilterContainer
+import com.hoandesign.standby.ui.components.WidgetPickerSheet
 import com.hoandesign.standby.ui.components.pixelShift
 import com.hoandesign.standby.ui.layout.AdaptiveStandbyLayout
 import com.hoandesign.standby.ui.layout.MainStandbyPager
@@ -69,20 +78,9 @@ import com.hoandesign.standby.ui.theme.StandbyCardBgSecondary
 import com.hoandesign.standby.ui.theme.TextPrimary
 import com.hoandesign.standby.ui.theme.TextSecondary
 import com.hoandesign.standby.ui.theme.TextTertiary
-import com.hoandesign.standby.ui.widgets.battery.BatteryWidget
-import com.hoandesign.standby.ui.widgets.calendar.AgendaWidget
-import com.hoandesign.standby.ui.widgets.calendar.MonthCalendarWidget
-import com.hoandesign.standby.ui.widgets.clock.AnalogClockWidget
 import com.hoandesign.standby.ui.widgets.clock.BigDigitalClockWidget
 import com.hoandesign.standby.ui.widgets.clock.RadialClockWidget
-import com.hoandesign.standby.ui.widgets.clock.RetroFlipClockWidget
-import com.hoandesign.standby.ui.widgets.clock.SolarArcClockWidget
 import com.hoandesign.standby.ui.widgets.media.MusicPlayerWidget
-import com.hoandesign.standby.ui.widgets.photo.PhotoFrameWidget
-import com.hoandesign.standby.ui.widgets.system.SystemBentoWidget
-import com.hoandesign.standby.ui.widgets.timer.DeskTimerWidget
-import com.hoandesign.standby.ui.widgets.vibes.VibesWidget
-import com.hoandesign.standby.ui.widgets.weather.WeatherWidget
 
 /**
  * Curated accent colors available in StandBy settings:
@@ -98,20 +96,19 @@ val StandbyAccentColors = listOf(
 )
 
 /**
- * Unified StandBy UI composing all widgets and features built in Tasks 1-7.
+ * Unified StandBy UI composing all widgets and features.
  *
  * Architecture:
+ * - Dynamic Bento Slot customization:
+ *   - Left and Right bento slots can have widgets added, removed, and rearranged.
+ *   - All 14 modular widgets can be picked from the Apple StandBy-style widget catalog.
+ *   - Changes are saved persistently across app launches.
+ * - True Full-Screen Single Slot Mode:
+ *   - Any slot can expand into an immersive, edge-to-edge fullscreen widget display.
+ *   - Smooth collapse back to dual bento layout.
  * - Monochromatic OLED Night Mode preservation via [NightModeFilterContainer].
  * - Continuous OLED burn-in protection via [Modifier.pixelShift].
- * - Dual-axis navigation via [MainStandbyPager] containing:
- *   - Left Slot Stack: AnalogClock, BigDigitalClock, RetroFlipClock, Weather, SolarArcClock, RadialClock.
- *   - Right Slot Stack: MonthCalendar, Agenda, Battery, MusicPlayer, SystemBento, DeskTimer, Vibes, PhotoFrame.
- *   - Hero Clock: RadialClock / BigDigitalClock full-screen (tap to switch).
- *   - Now Playing: MusicPlayer full-screen.
- * - Subtle glassmorphic quick settings sheet accessible via gear icon or bottom edge tap:
- *   - Night Mode toggle: Auto (< 5 lux), Always Red, Disabled.
- *   - Accent color selector: Green, Orange, Amber, Cyan, Purple, White.
- *   - Auto-launch on dock toggle.
+ * - Dual-axis navigation via [MainStandbyPager].
  */
 @Composable
 fun MainStandbyScreen(
@@ -123,35 +120,70 @@ fun MainStandbyScreen(
     autoLaunchOnDock: Boolean = true,
     onAutoLaunchOnDockChange: ((Boolean) -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val prefs = remember(context) {
+        context.getSharedPreferences(ChargingReceiver.PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
     var currentNightModeState by remember(nightModeState) { mutableStateOf(nightModeState) }
     var currentAccentColor by remember(accentColor) { mutableStateOf(accentColor) }
     var currentAutoLaunch by remember(autoLaunchOnDock) { mutableStateOf(autoLaunchOnDock) }
     var showQuickSettings by remember { mutableStateOf(false) }
 
-    // Left Slot Stack Widgets
-    val leftSlotWidgets: List<@Composable () -> Unit> = remember(currentAccentColor) {
-        listOf(
-            { AnalogClockWidget() },
-            { BigDigitalClockWidget(accentColor = currentAccentColor) },
-            { RetroFlipClockWidget(accentColor = currentAccentColor) },
-            { WeatherWidget() },
-            { SolarArcClockWidget(accentColor = currentAccentColor) },
-            { RadialClockWidget(accentColor = currentAccentColor) }
-        )
+    // Dynamic Bento Slot State (persisted to SharedPreferences)
+    var leftSlotWidgetIds by remember {
+        val raw = prefs.getString(ChargingReceiver.KEY_LEFT_SLOT_WIDGETS, null)
+        mutableStateOf(StandbyWidgetRegistry.deserializeWidgetList(raw, StandbyWidgetRegistry.defaultLeftSlot))
     }
 
-    // Right Slot Stack Widgets
-    val rightSlotWidgets: List<@Composable () -> Unit> = remember(currentAccentColor) {
-        listOf(
-            { MonthCalendarWidget() },
-            { AgendaWidget() },
-            { BatteryWidget() },
-            { MusicPlayerWidget(isCompact = true) },
-            { SystemBentoWidget() },
-            { DeskTimerWidget(accentColor = currentAccentColor) },
-            { VibesWidget() },
-            { PhotoFrameWidget() }
-        )
+    var rightSlotWidgetIds by remember {
+        val raw = prefs.getString(ChargingReceiver.KEY_RIGHT_SLOT_WIDGETS, null)
+        mutableStateOf(StandbyWidgetRegistry.deserializeWidgetList(raw, StandbyWidgetRegistry.defaultRightSlot))
+    }
+
+    var isEditMode by remember { mutableStateOf(false) }
+    var showWidgetPicker by remember { mutableStateOf(false) }
+    var widgetPickerSlot by remember { mutableIntStateOf(0) }
+
+    fun persistLeftSlot(newList: List<StandbyWidgetId>) {
+        leftSlotWidgetIds = newList
+        prefs.edit().putString(
+            ChargingReceiver.KEY_LEFT_SLOT_WIDGETS,
+            StandbyWidgetRegistry.serializeWidgetList(newList)
+        ).apply()
+    }
+
+    fun persistRightSlot(newList: List<StandbyWidgetId>) {
+        rightSlotWidgetIds = newList
+        prefs.edit().putString(
+            ChargingReceiver.KEY_RIGHT_SLOT_WIDGETS,
+            StandbyWidgetRegistry.serializeWidgetList(newList)
+        ).apply()
+    }
+
+    fun onAddWidget(slotIndex: Int, widgetId: StandbyWidgetId) {
+        if (slotIndex == 0) {
+            val updated = leftSlotWidgetIds + widgetId
+            persistLeftSlot(updated)
+        } else {
+            val updated = rightSlotWidgetIds + widgetId
+            persistRightSlot(updated)
+        }
+    }
+
+    fun onRemoveWidget(slotIndex: Int, widgetIndex: Int) {
+        if (slotIndex == 0 && leftSlotWidgetIds.size > 1 && widgetIndex in leftSlotWidgetIds.indices) {
+            val updated = leftSlotWidgetIds.toMutableList().apply { removeAt(widgetIndex) }
+            persistLeftSlot(updated)
+        } else if (slotIndex == 1 && rightSlotWidgetIds.size > 1 && widgetIndex in rightSlotWidgetIds.indices) {
+            val updated = rightSlotWidgetIds.toMutableList().apply { removeAt(widgetIndex) }
+            persistRightSlot(updated)
+        }
+    }
+
+    fun onResetDefaults() {
+        persistLeftSlot(StandbyWidgetRegistry.defaultLeftSlot)
+        persistRightSlot(StandbyWidgetRegistry.defaultRightSlot)
     }
 
     StandByTheme(
@@ -168,8 +200,18 @@ fun MainStandbyScreen(
                 Box(modifier = Modifier.fillMaxSize()) {
                     MainStandbyPager(
                         archetype = archetype,
-                        leftSlotWidgets = leftSlotWidgets,
-                        rightSlotWidgets = rightSlotWidgets,
+                        leftSlotWidgetIds = leftSlotWidgetIds,
+                        rightSlotWidgetIds = rightSlotWidgetIds,
+                        accentColor = currentAccentColor,
+                        isEditMode = isEditMode,
+                        onToggleEditMode = { isEditMode = !isEditMode },
+                        onOpenWidgetPicker = { slotIdx ->
+                            widgetPickerSlot = slotIdx
+                            showWidgetPicker = true
+                        },
+                        onRemoveWidgetFromSlot = { slotIdx, widgetIdx ->
+                            onRemoveWidget(slotIdx, widgetIdx)
+                        },
                         heroClockContent = {
                             HeroClockView(accentColor = currentAccentColor)
                         },
@@ -182,19 +224,104 @@ fun MainStandbyScreen(
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    // Subtle top-end gear icon button for quick settings
-                    IconButton(
-                        onClick = { showQuickSettings = true },
+                    // Top-center indicator when in Bento Edit Mode
+                    AnimatedVisibility(
+                        visible = isEditMode,
+                        enter = fadeIn() + slideInVertically { -it },
+                        exit = fadeOut() + slideOutVertically { -it },
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .padding(top = 16.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(StandbyCardBgSecondary.copy(alpha = 0.95f))
+                                .border(1.dp, currentAccentColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(
+                                    text = "Customizing Bento Stacks",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(currentAccentColor)
+                                        .clickable { isEditMode = false }
+                                        .padding(horizontal = 12.dp, vertical = 5.dp)
+                                ) {
+                                    Text(
+                                        text = "Done",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Top-End Quick Actions (Customize Bento & Settings)
+                    Row(
                         modifier = Modifier
                             .align(Alignment.TopEnd)
-                            .padding(top = 16.dp, end = 20.dp)
+                            .padding(top = 12.dp, end = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Quick Settings",
-                            tint = TextSecondary.copy(alpha = 0.45f),
-                            modifier = Modifier.size(22.dp)
-                        )
+                        if (!isEditMode) {
+                            // Customize Bento button
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
+                                    .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(14.dp))
+                                    .clickable { isEditMode = true }
+                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Tune,
+                                        contentDescription = "Customize Bento",
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Text(
+                                        text = "Customize",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary
+                                    )
+                                }
+                            }
+
+                            // Settings gear button
+                            Box(
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
+                                    .border(1.dp, StandbyBorderSubtle, CircleShape)
+                                    .clickable { showQuickSettings = true }
+                                    .padding(7.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = "Quick Settings",
+                                    tint = TextSecondary.copy(alpha = 0.75f),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
                     }
 
                     // Bottom edge tap gesture zone
@@ -222,6 +349,19 @@ fun MainStandbyScreen(
                         )
                     }
 
+                    // Widget Picker Sheet
+                    WidgetPickerSheet(
+                        visible = showWidgetPicker,
+                        slotIndex = widgetPickerSlot,
+                        currentSlotWidgets = if (widgetPickerSlot == 0) leftSlotWidgetIds else rightSlotWidgetIds,
+                        accentColor = currentAccentColor,
+                        onSelectWidget = { widgetId ->
+                            onAddWidget(widgetPickerSlot, widgetId)
+                        },
+                        onResetDefaults = { onResetDefaults() },
+                        onDismiss = { showWidgetPicker = false }
+                    )
+
                     // Glassmorphic Quick Settings Modal
                     QuickSettingsModal(
                         visible = showQuickSettings,
@@ -240,6 +380,9 @@ fun MainStandbyScreen(
                         onAutoLaunchChange = { enabled ->
                             currentAutoLaunch = enabled
                             onAutoLaunchOnDockChange?.invoke(enabled)
+                        },
+                        onCustomizeSlots = {
+                            isEditMode = true
                         },
                         onDismiss = { showQuickSettings = false }
                     )
@@ -296,6 +439,7 @@ private fun QuickSettingsModal(
     onAccentColorSelect: (Color) -> Unit,
     autoLaunchOnDock: Boolean,
     onAutoLaunchChange: (Boolean) -> Unit,
+    onCustomizeSlots: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AnimatedVisibility(
@@ -364,6 +508,70 @@ private fun QuickSettingsModal(
                             .background(StandbyBorder)
                     )
 
+                    // Customize Bento Slots Action Card
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(StandbyCardBg)
+                            .border(1.dp, StandbyBorder, RoundedCornerShape(14.dp))
+                            .clickable {
+                                onDismiss()
+                                onCustomizeSlots()
+                            }
+                            .padding(14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(accentColor.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = "Customize Stacks",
+                                    tint = accentColor,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Customize Bento Slots",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "Add, remove & rearrange widgets",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Open",
+                            tint = TextTertiary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(StandbyBorder)
+                    )
+
                     // Night Mode Section
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(
@@ -390,9 +598,9 @@ private fun QuickSettingsModal(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             val options = listOf(
+                                Triple(NightModePreference.DISABLED, "Disabled", "Disabled"),
                                 Triple(NightModePreference.AUTO, "Auto (< 5 lux)", "Auto (< 5 lux)"),
-                                Triple(NightModePreference.ALWAYS_ON, "Always Red", "Always Red"),
-                                Triple(NightModePreference.DISABLED, "Disabled", "Disabled")
+                                Triple(NightModePreference.ALWAYS_ON, "Always Red", "Always Red")
                             )
 
                             options.forEach { (pref, _, label) ->
