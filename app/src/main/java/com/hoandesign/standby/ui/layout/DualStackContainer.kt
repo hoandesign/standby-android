@@ -76,8 +76,8 @@ fun DualStackContainer(
             else -> 16.dp
         }
         val verticalPadding = when (archetype) {
-            LayoutArchetype.SQUARISH_FOLDABLE -> 12.dp
-            else -> 16.dp
+            LayoutArchetype.SQUARISH_FOLDABLE -> 8.dp
+            else -> 10.dp
         }
         val gutterWidth = when (archetype) {
             LayoutArchetype.SQUARISH_FOLDABLE -> 12.dp

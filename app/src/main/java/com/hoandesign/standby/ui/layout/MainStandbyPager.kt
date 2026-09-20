@@ -36,6 +36,8 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -104,6 +106,7 @@ fun MainStandbyPager(
     heroClockContent: @Composable () -> Unit,
     nowPlayingContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
+    onOpenSettings: () -> Unit = {},
     initialNavigationState: NavigationState = NavigationState(),
     onNavigationStateChange: ((NavigationState) -> Unit)? = null
 ) {
@@ -220,43 +223,64 @@ fun MainStandbyPager(
                     ) { mode ->
                         when (mode) {
                             WidgetDisplayMode.DUAL -> {
-                                AdaptiveStandbyLayout(
-                                    slot1 = {
-                                        DynamicSlotCard(
-                                            slotIndex = 0,
-                                            slotTitle = "LEFT BENTO",
-                                            widgetIds = safeLeftIds,
-                                            pagerState = leftPagerState,
-                                            accentColor = accentColor,
-                                            isEditMode = isEditMode,
-                                            onOpenWidgetPicker = { onOpenWidgetPicker(0) },
-                                            onRemoveWidget = { idx -> onRemoveWidgetFromSlot(0, idx) },
-                                            onToggleExpand = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                updateNavigationState(navigationState.expandSlot(0))
-                                            },
-                                            onExitEditMode = onToggleEditMode
-                                        )
-                                    },
-                                    slot2 = {
-                                        DynamicSlotCard(
-                                            slotIndex = 1,
-                                            slotTitle = "RIGHT BENTO",
-                                            widgetIds = safeRightIds,
-                                            pagerState = rightPagerState,
-                                            accentColor = accentColor,
-                                            isEditMode = isEditMode,
-                                            onOpenWidgetPicker = { onOpenWidgetPicker(1) },
-                                            onRemoveWidget = { idx -> onRemoveWidgetFromSlot(1, idx) },
-                                            onToggleExpand = {
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                updateNavigationState(navigationState.expandSlot(1))
-                                            },
-                                            onExitEditMode = onToggleEditMode
-                                        )
-                                    },
+                                Column(
                                     modifier = Modifier.fillMaxSize()
-                                )
+                                ) {
+                                    // Dedicated StandBy Top Status Bar
+                                    StandbyTopBar(
+                                        isEditMode = isEditMode,
+                                        accentColor = accentColor,
+                                        onToggleEditMode = onToggleEditMode,
+                                        onOpenSettings = onOpenSettings
+                                    )
+
+                                    // Dual Bento Slots Container
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                    ) {
+                                        AdaptiveStandbyLayout(
+                                            slot1 = {
+                                                DynamicSlotCard(
+                                                    slotIndex = 0,
+                                                    slotTitle = "LEFT BENTO",
+                                                    widgetIds = safeLeftIds,
+                                                    pagerState = leftPagerState,
+                                                    accentColor = accentColor,
+                                                    isEditMode = isEditMode,
+                                                    onOpenWidgetPicker = { onOpenWidgetPicker(0) },
+                                                    onRemoveWidget = { idx -> onRemoveWidgetFromSlot(0, idx) },
+                                                    onToggleExpand = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        if (isEditMode) onToggleEditMode()
+                                                        updateNavigationState(navigationState.expandSlot(0))
+                                                    },
+                                                    onExitEditMode = onToggleEditMode
+                                                )
+                                            },
+                                            slot2 = {
+                                                DynamicSlotCard(
+                                                    slotIndex = 1,
+                                                    slotTitle = "RIGHT BENTO",
+                                                    widgetIds = safeRightIds,
+                                                    pagerState = rightPagerState,
+                                                    accentColor = accentColor,
+                                                    isEditMode = isEditMode,
+                                                    onOpenWidgetPicker = { onOpenWidgetPicker(1) },
+                                                    onRemoveWidget = { idx -> onRemoveWidgetFromSlot(1, idx) },
+                                                    onToggleExpand = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        if (isEditMode) onToggleEditMode()
+                                                        updateNavigationState(navigationState.expandSlot(1))
+                                                    },
+                                                    onExitEditMode = onToggleEditMode
+                                                )
+                                            },
+                                            modifier = Modifier.fillMaxSize()
+                                        )
+                                    }
+                                }
                             }
                             WidgetDisplayMode.SINGLE_EXPANDED -> {
                                 // True Edge-to-Edge Fullscreen Single Slot Feature
@@ -708,3 +732,129 @@ private fun WidgetSlotStack(
         }
     }
 }
+
+/**
+ * Dedicated StandBy top status bar displayed exclusively in Dual Bento mode.
+ *
+ * Provides:
+ * - Clean "STANDBY" uppercase tracking micro-label with subtle "EDITING" badge when in edit mode.
+ * - Right-aligned controls: prominent [ Done ] pill when editing; [ Customize ] and [ Settings ]
+ *   when in normal viewing mode.
+ * - Perfectly positioned above the bento cards with zero occlusion or overlap.
+ */
+@Composable
+private fun StandbyTopBar(
+    isEditMode: Boolean,
+    accentColor: Color,
+    onToggleEditMode: () -> Unit,
+    onOpenSettings: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Left: Clean Apple StandBy brand micro-title
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "STANDBY",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 2.sp,
+                color = TextTertiary
+            )
+
+            if (isEditMode) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(accentColor.copy(alpha = 0.2f))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "EDITING",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp,
+                        color = accentColor
+                    )
+                }
+            }
+        }
+
+        // Right: Contextual Controls (Done when editing; Customize & Settings when viewing)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (isEditMode) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(accentColor)
+                        .clickable { onToggleEditMode() }
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Done",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                }
+            } else {
+                // Customize button
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
+                        .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(14.dp))
+                        .clickable { onToggleEditMode() }
+                        .padding(horizontal = 10.dp, vertical = 5.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Tune,
+                            contentDescription = "Customize Bento",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Customize",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary
+                        )
+                    }
+                }
+
+                // Settings gear button
+                Box(
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
+                        .border(1.dp, StandbyBorderSubtle, CircleShape)
+                        .clickable { onOpenSettings() }
+                        .padding(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Quick Settings",
+                        tint = TextSecondary.copy(alpha = 0.85f),
+                        modifier = Modifier.size(15.dp)
+                    )
+                }
+            }
+        }
+    }
+}
+

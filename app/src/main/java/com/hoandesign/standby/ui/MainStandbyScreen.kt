@@ -205,6 +205,7 @@ fun MainStandbyScreen(
                         accentColor = currentAccentColor,
                         isEditMode = isEditMode,
                         onToggleEditMode = { isEditMode = !isEditMode },
+                        onOpenSettings = { showQuickSettings = true },
                         onOpenWidgetPicker = { slotIdx ->
                             widgetPickerSlot = slotIdx
                             showWidgetPicker = true
@@ -223,131 +224,6 @@ fun MainStandbyScreen(
                         },
                         modifier = Modifier.fillMaxSize()
                     )
-
-                    // Top-center indicator when in Bento Edit Mode
-                    AnimatedVisibility(
-                        visible = isEditMode,
-                        enter = fadeIn() + slideInVertically { -it },
-                        exit = fadeOut() + slideOutVertically { -it },
-                        modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .padding(top = 16.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(20.dp))
-                                .background(StandbyCardBgSecondary.copy(alpha = 0.95f))
-                                .border(1.dp, currentAccentColor.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                                .padding(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Text(
-                                    text = "Customizing Bento Stacks",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(currentAccentColor)
-                                        .clickable { isEditMode = false }
-                                        .padding(horizontal = 12.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = "Done",
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.Black
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    // Top-Center Quick Actions (Customize Bento & Settings) placed in gutter between bento cards
-                    if (!isEditMode) {
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .padding(top = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Customize Bento button
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
-                                    .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(14.dp))
-                                    .clickable { isEditMode = true }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Tune,
-                                        contentDescription = "Customize Bento",
-                                        tint = TextSecondary,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                    Text(
-                                        text = "Customize",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-
-                            // Settings gear button
-                            Box(
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
-                                    .border(1.dp, StandbyBorderSubtle, CircleShape)
-                                    .clickable { showQuickSettings = true }
-                                    .padding(7.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Settings,
-                                    contentDescription = "Quick Settings",
-                                    tint = TextSecondary.copy(alpha = 0.75f),
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    // Bottom edge tap gesture zone
-                    Box(
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .fillMaxWidth(0.3f)
-                            .height(28.dp)
-                            .clickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = null
-                            ) {
-                                showQuickSettings = true
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(36.dp)
-                                .height(4.dp)
-                                .background(
-                                    color = TextTertiary.copy(alpha = 0.35f),
-                                    shape = CircleShape
-                                )
-                        )
-                    }
 
                     // Widget Picker Sheet
                     WidgetPickerSheet(
