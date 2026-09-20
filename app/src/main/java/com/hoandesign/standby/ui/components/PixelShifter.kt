@@ -49,9 +49,15 @@ fun calculatePixelShiftOffset(stepIndex: Long, amplitudeDp: Float = 1.5f): Pair<
  * Modifier that imperceptibly shifts content by -amplitudeDp to +amplitudeDp
  * every [stepMillis] along a smooth Lissajous curve to prevent OLED burn-in.
  *
+ * Energy & Battery Architecture:
+ * - Total step cycle: [stepMillis] (120,000ms / 2 minutes).
+ * - Active transition: 2,000ms smooth linear interpolation to new subpixel offset.
+ * - Static rest interval: 118,000ms (zero animation frames, zero recomposition, sleep-friendly).
+ * - Clock source: [android.os.SystemClock.elapsedRealtime] (monotonic, immune to wall-clock/NTP shifts).
+ *
  * @param enabled Whether pixel shifting is active.
- * @param stepMillis Interval between position updates (defaults to 2 minutes / 120,000ms).
- * @param amplitudeDp Maximum offset displacement in dp (e.g. 4.0f for high-contrast elements).
+ * @param stepMillis Total duration of one shift cycle in milliseconds (defaults to 120,000ms / 2 minutes).
+ * @param amplitudeDp Maximum offset displacement in dp (e.g. 1.5f for widgets, 4.0f for high-contrast hero clock).
  */
 fun Modifier.pixelShift(
     enabled: Boolean = true,
@@ -62,13 +68,13 @@ fun Modifier.pixelShift(
 } else {
     this.composed {
         var stepIndex by remember {
-            mutableLongStateOf(System.currentTimeMillis() / stepMillis)
+            mutableLongStateOf(android.os.SystemClock.elapsedRealtime() / stepMillis)
         }
 
         LaunchedEffect(stepMillis) {
             while (isActive) {
                 delay(stepMillis)
-                stepIndex = System.currentTimeMillis() / stepMillis
+                stepIndex = android.os.SystemClock.elapsedRealtime() / stepMillis
             }
         }
 
