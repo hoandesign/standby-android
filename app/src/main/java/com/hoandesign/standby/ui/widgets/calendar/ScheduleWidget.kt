@@ -1,5 +1,7 @@
 package com.hoandesign.standby.ui.widgets.calendar
 
+import android.app.KeyguardManager
+import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,14 +64,20 @@ import kotlinx.coroutines.isActive
  * @param onEventClick Optional callback when an event card is clicked.
  */
 @Composable
-fun AgendaWidget(
+fun ScheduleWidget(
     modifier: Modifier = Modifier,
     events: List<CalendarEvent>? = null,
     onEventClick: ((CalendarEvent) -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val repository = remember(context) { CalendarRepository(context) }
+    
+    val keyguardManager = remember(context) { context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager }
+    val isLocked = remember(context) { keyguardManager.isDeviceLocked }
+    val hasPermission = remember(context) { repository.hasCalendarPermission() }
+
     val eventList = events ?: remember(context) {
-        CalendarRepository(context).getUpcomingEvents()
+        if (isLocked || !hasPermission) emptyList() else repository.getUpcomingEvents()
     }
 
     val isNightMode = StandbyTheme.isNightMode
@@ -89,7 +97,7 @@ fun AgendaWidget(
             .padding(14.dp)
     ) {
         if (eventList.isEmpty()) {
-            EmptyAgendaView(isNightMode = isNightMode)
+            EmptyScheduleView(isNightMode = isNightMode, isLocked = isLocked, hasPermission = hasPermission)
         } else {
             val nextEvent = eventList.first()
             val timelineEvents = eventList.drop(1)
@@ -349,7 +357,13 @@ private fun TimelineEventRow(
  * Placeholder view when no events are scheduled.
  */
 @Composable
-private fun EmptyAgendaView(isNightMode: Boolean) {
+private fun EmptyScheduleView(isNightMode: Boolean, isLocked: Boolean, hasPermission: Boolean) {
+    val message = when {
+        isLocked -> "Unlock phone to sync calendar"
+        !hasPermission -> "Grant Calendar Access"
+        else -> "No Upcoming Events"
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -369,7 +383,7 @@ private fun EmptyAgendaView(isNightMode: Boolean) {
                 )
             )
             Text(
-                text = "No Upcoming Events",
+                text = message,
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Medium,

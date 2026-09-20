@@ -1,5 +1,6 @@
 package com.hoandesign.standby.ui.widgets.clock
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -8,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -66,22 +66,16 @@ fun AnalogClockWidget(
     val isNightMode = StandbyTheme.isNightMode
     val textMeasurer = rememberTextMeasurer()
 
-    // Live continuous time state loop
-    val time by produceState(
-        initialValue = clockTime ?: ClockTime.now(),
-        key1 = clockTime,
-        key2 = smoothSweep
-    ) {
-        if (clockTime != null) {
-            value = clockTime
-            return@produceState
-        }
-        val frameDelay = if (smoothSweep) 16L else 1000L
-        while (isActive) {
-            value = ClockTime.now()
-            delay(frameDelay)
-        }
-    }
+    // Drive continuous draw phase invalidation without triggering recomposition
+    val infiniteTransition = androidx.compose.animation.core.rememberInfiniteTransition()
+    val tick by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
+            animation = androidx.compose.animation.core.tween(1000, easing = androidx.compose.animation.core.LinearEasing)
+        )
+    )
+
 
     // Color palette resolution based on active Night Mode state
     val dialBackgroundColor = OledBlack
@@ -104,6 +98,9 @@ fun AnalogClockWidget(
                 .fillMaxSize()
                 .aspectRatio(1f)
         ) {
+            val _t = tick // invalidates draw phase continuously
+            val time = clockTime ?: ClockTime.now()
+
             val center = Offset(size.width / 2f, size.height / 2f)
             val dialRadius = min(size.width, size.height) / 2f * 0.94f
 

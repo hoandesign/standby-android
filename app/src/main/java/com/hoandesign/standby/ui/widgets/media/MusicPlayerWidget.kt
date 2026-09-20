@@ -47,6 +47,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.hoandesign.standby.service.StandbyMediaListenerService
+import com.hoandesign.standby.service.MediaPlaybackState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -119,26 +122,19 @@ fun MusicPlayerWidget(
         }
     }
 
-    // Continuous vinyl rotation animation
-    val infiniteTransition = rememberInfiniteTransition(label = "VinylSpin")
-    val spinningAngle by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "VinylAngle"
-    )
-
-    // Freeze angle if paused
-    var frozenAngle by remember { mutableFloatStateOf(0f) }
+    // Spin animation that ONLY runs when isPlaying == true
+    var effectiveAngle by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(isPlaying) {
-        if (!isPlaying) {
-            frozenAngle = spinningAngle
+        if (isPlaying) {
+            var lastTime = androidx.compose.runtime.withFrameNanos { it }
+            while (isActive) {
+                val currentTime = androidx.compose.runtime.withFrameNanos { it }
+                val deltaMs = (currentTime - lastTime) / 1_000_000f
+                effectiveAngle = (effectiveAngle + (deltaMs / 6000f) * 360f) % 360f
+                lastTime = currentTime
+            }
         }
     }
-    val effectiveAngle = if (isPlaying) spinningAngle else frozenAngle
 
     BoxWithConstraints(
         modifier = modifier
@@ -351,7 +347,10 @@ private fun CompactMusicPlayerLayout(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .clickable { onPrev() }
+                    .clickable { 
+                            StandbyMediaListenerService.instance?.skipToPrevious()
+                            onPrev()
+                        }
                     .padding(4.dp)
             )
 
@@ -389,7 +388,10 @@ private fun CompactMusicPlayerLayout(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .clickable { onNext() }
+                    .clickable { 
+                            StandbyMediaListenerService.instance?.skipToNext()
+                            onNext()
+                        }
                     .padding(4.dp)
             )
         }
@@ -542,7 +544,10 @@ private fun FullscreenMusicPlayerLayout(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable { onPrev() }
+                        .clickable { 
+                            StandbyMediaListenerService.instance?.skipToPrevious()
+                            onPrev()
+                        }
                         .padding(6.dp)
                 )
 
@@ -558,7 +563,13 @@ private fun FullscreenMusicPlayerLayout(
                             if (isNightMode) NightRed else StandbyBorder,
                             CircleShape
                         )
-                        .clickable { onTogglePlay() },
+                        .clickable {
+                            val service = StandbyMediaListenerService.instance
+                            if (service != null) {
+                                if (isPlaying) service.pause() else service.play()
+                            }
+                            onTogglePlay()
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -578,7 +589,10 @@ private fun FullscreenMusicPlayerLayout(
                     modifier = Modifier
                         .size(44.dp)
                         .clip(CircleShape)
-                        .clickable { onNext() }
+                        .clickable { 
+                            StandbyMediaListenerService.instance?.skipToNext()
+                            onNext()
+                        }
                         .padding(6.dp)
                 )
             }
@@ -614,7 +628,7 @@ private fun AlbumArtCover(
     ) {
         // Minimalist vinyl sleeve label / icon
         Text(
-            text = "M83",
+            text = "♪",
             style = TextStyle(
                 fontFamily = FontFamily.Default,
                 fontWeight = FontWeight.Black,

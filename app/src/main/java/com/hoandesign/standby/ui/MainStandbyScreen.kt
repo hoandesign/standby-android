@@ -181,6 +181,24 @@ fun MainStandbyScreen(
         }
     }
 
+    fun onReorderWidgets(slotIndex: Int, from: Int, to: Int) {
+        if (slotIndex == 0) {
+            if (from in leftSlotWidgetIds.indices && to in leftSlotWidgetIds.indices) {
+                val updated = leftSlotWidgetIds.toMutableList()
+                val item = updated.removeAt(from)
+                updated.add(to, item)
+                persistLeftSlot(updated)
+            }
+        } else {
+            if (from in rightSlotWidgetIds.indices && to in rightSlotWidgetIds.indices) {
+                val updated = rightSlotWidgetIds.toMutableList()
+                val item = updated.removeAt(from)
+                updated.add(to, item)
+                persistRightSlot(updated)
+            }
+        }
+    }
+
     fun onResetDefaults() {
         persistLeftSlot(StandbyWidgetRegistry.defaultLeftSlot)
         persistRightSlot(StandbyWidgetRegistry.defaultRightSlot)
@@ -212,6 +230,13 @@ fun MainStandbyScreen(
                         },
                         onRemoveWidgetFromSlot = { slotIdx, widgetIdx ->
                             onRemoveWidget(slotIdx, widgetIdx)
+                        },
+                        onReorderSlotWidgets = { slotIdx, from, to ->
+                            onReorderWidgets(slotIdx, from, to)
+                        },
+                        onResetSlotDefaults = { slotIdx ->
+                            if (slotIdx == 0) persistLeftSlot(StandbyWidgetRegistry.defaultLeftSlot)
+                            else persistRightSlot(StandbyWidgetRegistry.defaultRightSlot)
                         },
                         heroClockContent = {
                             HeroClockView(accentColor = currentAccentColor)

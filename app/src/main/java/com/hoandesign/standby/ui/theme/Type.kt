@@ -16,42 +16,42 @@ import androidx.compose.ui.unit.sp
 @Immutable
 data class StandbyTypography(
     val heroTime: TextStyle = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Black,
         fontSize = 96.sp,
         lineHeight = 100.sp,
-        letterSpacing = (-0.03).em
+        letterSpacing = (-0.05).em
     ),
     val displayTime: TextStyle = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 56.sp,
         lineHeight = 60.sp,
-        letterSpacing = (-0.02).em
+        letterSpacing = (-0.03).em
     ),
     val titleLarge: TextStyle = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
         letterSpacing = 0.em
     ),
     val titleMedium: TextStyle = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp,
         letterSpacing = 0.01.em
     ),
     val bodyMedium: TextStyle = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp,
         letterSpacing = 0.01.em
     ),
     val labelSmall: TextStyle = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 14.sp,
@@ -66,39 +66,39 @@ val LocalStandbyTypography = staticCompositionLocalOf { StandbyTypography() }
  */
 val StandbyMaterialTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Black,
         fontSize = 96.sp,
         lineHeight = 100.sp,
-        letterSpacing = (-0.03).em
+        letterSpacing = (-0.05).em
     ),
     displayMedium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 56.sp,
         lineHeight = 60.sp,
-        letterSpacing = (-0.02).em
+        letterSpacing = (-0.03).em
     ),
     titleLarge = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Bold,
         fontSize = 22.sp,
         lineHeight = 28.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.SemiBold,
         fontSize = 16.sp,
         lineHeight = 22.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = FontFamily.Default,
+        fontFamily = InterFontFamily,
         fontWeight = FontWeight.Medium,
         fontSize = 11.sp,
         lineHeight = 14.sp,

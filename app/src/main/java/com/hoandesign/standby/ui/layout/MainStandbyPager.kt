@@ -1,5 +1,19 @@
 package com.hoandesign.standby.ui.layout
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntOffsetAsState
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.shadow
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.offset
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -103,6 +117,8 @@ fun MainStandbyPager(
     onToggleEditMode: () -> Unit,
     onOpenWidgetPicker: (slotIndex: Int) -> Unit,
     onRemoveWidgetFromSlot: (slotIndex: Int, widgetIndex: Int) -> Unit,
+    onReorderSlotWidgets: (slotIndex: Int, from: Int, to: Int) -> Unit = { _, _, _ -> },
+    onResetSlotDefaults: (slotIndex: Int) -> Unit = {},
     heroClockContent: @Composable () -> Unit,
     nowPlayingContent: @Composable () -> Unit,
     modifier: Modifier = Modifier,
@@ -256,7 +272,9 @@ fun MainStandbyPager(
                                                         if (isEditMode) onToggleEditMode()
                                                         updateNavigationState(navigationState.expandSlot(0))
                                                     },
-                                                    onExitEditMode = onToggleEditMode
+                                                    onExitEditMode = onToggleEditMode,
+                                                    onReorderWidgets = { from, to -> onReorderSlotWidgets(0, from, to) },
+                                                    onResetDefaults = { onResetSlotDefaults(0) }
                                                 )
                                             },
                                             slot2 = {
@@ -274,7 +292,9 @@ fun MainStandbyPager(
                                                         if (isEditMode) onToggleEditMode()
                                                         updateNavigationState(navigationState.expandSlot(1))
                                                     },
-                                                    onExitEditMode = onToggleEditMode
+                                                    onExitEditMode = onToggleEditMode,
+                                                    onReorderWidgets = { from, to -> onReorderSlotWidgets(1, from, to) },
+                                                    onResetDefaults = { onResetSlotDefaults(1) }
                                                 )
                                             },
                                             modifier = Modifier.fillMaxSize()
@@ -496,6 +516,8 @@ private fun DynamicSlotCard(
     onRemoveWidget: (Int) -> Unit,
     onToggleExpand: () -> Unit,
     onExitEditMode: () -> Unit,
+    onReorderWidgets: ((Int, Int) -> Unit)? = null,
+    onResetDefaults: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val haptic = LocalHapticFeedback.current
@@ -504,73 +526,43 @@ private fun DynamicSlotCard(
         modifier = modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTapGestures(
-                    onDoubleTap = { onToggleExpand() },
-                    onLongPress = { onToggleExpand() }
-                )
-            }
-    ) {
-        VerticalPager(
-            state = pagerState,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(
-                    top = if (isEditMode) 38.dp else 0.dp,
-                    bottom = if (isEditMode) 36.dp else 0.dp,
-                    start = if (isEditMode) 10.dp else 0.dp,
-                    end = if (isEditMode) 10.dp else 0.dp
-                )
-        ) { pageIndex ->
-            if (pageIndex < widgetIds.size) {
-                val widgetId = widgetIds[pageIndex]
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    StandbyWidgetRegistry.RenderCompact(
-                        widgetId = widgetId,
-                        accentColor = accentColor,
-                        modifier = Modifier.fillMaxSize()
+                if (!isEditMode) {
+                    detectTapGestures(
+                        onDoubleTap = { onToggleExpand() },
+                        onLongPress = { onToggleExpand() }
                     )
                 }
-            } else if (isEditMode) {
-                // "+ Add Widget" card at end of stack
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clickable { onOpenWidgetPicker() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+            }
+    ) {
+        if (isEditMode) {
+            EditModeWidgetStack(
+                widgetIds = widgetIds,
+                accentColor = accentColor,
+                onRemoveWidget = onRemoveWidget,
+                onOpenWidgetPicker = onOpenWidgetPicker,
+                onReorder = { from, to -> onReorderWidgets?.invoke(from, to) }
+            )
+        } else {
+            VerticalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { pageIndex ->
+                if (pageIndex < widgetIds.size) {
+                    val widgetId = widgetIds[pageIndex]
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(accentColor.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add Widget",
-                                tint = accentColor,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-                        Text(
-                            text = "Add Widget",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                        StandbyWidgetRegistry.RenderCompact(
+                            widgetId = widgetId,
+                            accentColor = accentColor,
+                            modifier = Modifier.fillMaxSize()
                         )
                     }
                 }
             }
         }
 
-        // Subtle vertical pager dots indicator
         if (widgetIds.size > 1 && !isEditMode) {
             VerticalPagerIndicator(
                 pageCount = widgetIds.size,
@@ -581,9 +573,8 @@ private fun DynamicSlotCard(
             )
         }
 
-        // Edit Mode overlay (Header, Delete badge, Add button, Fullscreen button)
+        // Edit Mode overlay (Header)
         if (isEditMode) {
-            // Header Bar
             Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -614,30 +605,18 @@ private fun DynamicSlotCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // + Add button
+                    // Restore default button
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(accentColor)
-                            .clickable { onOpenWidgetPicker() }
+                            .background(StandbyCardBgSecondary)
+                            .border(1.dp, StandbyBorderSubtle, RoundedCornerShape(10.dp))
+                            .clickable { onResetDefaults?.invoke() }
                             .padding(horizontal = 8.dp, vertical = 4.dp)
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(2.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add",
-                                tint = Color.Black,
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Text(
-                                text = "Add",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.Black
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Icon(imageVector = Icons.Default.Restore, contentDescription = "Reset", tint = TextPrimary, modifier = Modifier.size(12.dp))
+                            Text(text = "Reset", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                         }
                     }
 
@@ -659,37 +638,10 @@ private fun DynamicSlotCard(
                     }
                 }
             }
-
-            // Remove button on active widget (disabled if only 1 widget left)
-            if (pagerState.currentPage < widgetIds.size && widgetIds.size > 1) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp)
-                        .clip(CircleShape)
-                        .background(NightRed)
-                        .clickable {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onRemoveWidget(pagerState.currentPage)
-                        }
-                        .size(28.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Remove,
-                        contentDescription = "Remove Widget",
-                        tint = Color.White,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
         }
     }
 }
 
-/**
- * Hosts an independent vertical widget stack with snap scrolling.
- */
 @Composable
 private fun WidgetSlotStack(
     widgets: List<@Composable () -> Unit>,
@@ -858,3 +810,163 @@ private fun StandbyTopBar(
     }
 }
 
+
+@Composable
+fun EditModeWidgetStack(
+    widgetIds: List<StandbyWidgetId>,
+    accentColor: Color,
+    onRemoveWidget: (Int) -> Unit,
+    onOpenWidgetPicker: () -> Unit,
+    onReorder: (Int, Int) -> Unit
+) {
+    val haptic = LocalHapticFeedback.current
+    val context = LocalContext.current
+    
+    var draggedIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffset by remember { mutableStateOf(0f) }
+    
+    val listState = rememberLazyListState()
+    
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 38.dp, bottom = 36.dp, start = 10.dp, end = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 100.dp)
+    ) {
+        itemsIndexed(widgetIds, key = { _, id -> id.name }) { index, widgetId ->
+            val isDragged = draggedIndex == index
+            
+            val scale by animateFloatAsState(
+                targetValue = if (isDragged) 1.04f else 1f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            )
+            val elevation by animateFloatAsState(
+                targetValue = if (isDragged) 16f else 0f,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow)
+            )
+            val yOffset = if (isDragged) dragOffset else 0f
+            
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp) // Approximate height for testing
+                    .zIndex(if (isDragged) 1f else 0f)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                        translationY = yOffset
+                        shadowElevation = elevation
+                        shape = RoundedCornerShape(24.dp)
+                        clip = true
+                    }
+                    .pointerInput(Unit) {
+                        detectDragGesturesAfterLongPress(
+                            onDragStart = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                draggedIndex = index
+                                dragOffset = 0f
+                            },
+                            onDragEnd = {
+                                draggedIndex = null
+                                dragOffset = 0f
+                            },
+                            onDragCancel = {
+                                draggedIndex = null
+                                dragOffset = 0f
+                            },
+                            onDrag = { change, dragAmount ->
+                                change.consume()
+                                dragOffset += dragAmount.y
+                                
+                                // Simple swap logic
+                                val itemHeight = 200.dp.toPx() + 16.dp.toPx()
+                                val targetSwap = (dragOffset / itemHeight).toInt()
+                                if (targetSwap != 0) {
+                                    val newIndex = (index + targetSwap).coerceIn(0, widgetIds.size - 1)
+                                    if (newIndex != index) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                        onReorder(index, newIndex)
+                                        draggedIndex = newIndex
+                                        dragOffset -= targetSwap * itemHeight
+                                    }
+                                }
+                            }
+                        )
+                    }
+            ) {
+                StandbyWidgetRegistry.RenderCompact(
+                    widgetId = widgetId,
+                    accentColor = accentColor,
+                    modifier = Modifier.fillMaxSize()
+                )
+                
+                // Remove button
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(8.dp)
+                        .clip(CircleShape)
+                        .background(com.hoandesign.standby.ui.theme.NightRed)
+                        .clickable {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            if (widgetIds.size > 1) {
+                                onRemoveWidget(index)
+                            } else {
+                                Toast.makeText(context, "Cannot remove the last widget", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                        .size(28.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Remove,
+                        contentDescription = "Remove Widget",
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+        }
+        
+        // Add Widget Card
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(com.hoandesign.standby.ui.theme.StandbyCardBgSecondary)
+                    .clickable { onOpenWidgetPicker() },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(accentColor.copy(alpha = 0.2f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Widget",
+                            tint = accentColor,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Text(
+                        text = "Add Widget",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = com.hoandesign.standby.ui.theme.TextPrimary
+                    )
+                }
+            }
+        }
+    }
+}

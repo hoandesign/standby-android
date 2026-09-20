@@ -39,6 +39,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import com.hoandesign.standby.data.location.LocationHelper
 import com.hoandesign.standby.data.WeatherRepository
 import com.hoandesign.standby.model.WeatherState
 import com.hoandesign.standby.ui.theme.AccentCyan
@@ -75,8 +77,15 @@ fun WeatherWidget(
     repository: WeatherRepository = remember { WeatherRepository() },
     initialWeather: WeatherState? = null
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val weatherFlow = remember(repository) { repository.weatherFlow() }
+    
+    val locationData = remember(context) { LocationHelper.getCurrentLocationAndCity(context) }
+    val lat = locationData.first?.latitude ?: 37.7749
+    val lon = locationData.first?.longitude ?: -122.4194
+    val cityName = locationData.second
+    
+    val weatherFlow = remember(repository, lat, lon, cityName) { repository.weatherFlow(lat, lon, cityName) }
     val observedState by weatherFlow.collectAsState(initial = repository.getCachedWeather())
     val weather = initialWeather ?: observedState
 
@@ -91,7 +100,7 @@ fun WeatherWidget(
                 // Tap toggles temperature unit and triggers a background refresh
                 showCelsius = !showCelsius
                 coroutineScope.launch {
-                    repository.fetchWeather()
+                    repository.fetchWeather(lat, lon, cityName)
                 }
             }
             .padding(14.dp)

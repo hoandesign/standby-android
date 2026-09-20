@@ -7,12 +7,12 @@ val OledBlack = Color(0xFF000000)
 val StandbyBackground = OledBlack
 
 // Card backgrounds
-val StandbyCardBg = Color(0xFF0D0D0F)
+val StandbyCardBg = Color(0xEE121215)
 val StandbyCardBgSecondary = Color(0xFF151518)
 
 // Hairline borders
 val StandbyBorder = Color(0xFF28282C)
-val StandbyBorderSubtle = Color(0x33FFFFFF)
+val StandbyBorderSubtle = Color(0x28FFFFFF)
 
 // Text hierarchy
 val TextPrimary = Color(0xFFFFFFFF)
