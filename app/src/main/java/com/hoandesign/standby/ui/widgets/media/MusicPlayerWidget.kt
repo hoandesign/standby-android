@@ -7,9 +7,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.hoandesign.standby.util.PermissionHelper
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,7 +95,7 @@ import kotlinx.coroutines.isActive
  * - Realistic concentric vinyl sound grooves and glossy sheen.
  * - Scrubbable media progress bar with live position & remaining time.
  * - Media controls: Previous, Play/Pause toggle, and Next.
- * - Built-in default track: "Midnight City" by M83.
+ * - Live MediaSession integration with Spotify, YouTube Music, and system media apps.
  * - Monochromatic deep red adaptation in Night Mode.
  *
  * @param modifier Root modifier.
@@ -103,29 +108,54 @@ fun MusicPlayerWidget(
     initialTrack: MediaTrack = DEFAULT_MEDIA_TRACK,
     isCompact: Boolean? = null
 ) {
-    var track by remember { mutableStateOf(initialTrack) }
-    var isPlaying by remember { mutableStateOf(track.isPlaying) }
-    var currentPositionMs by remember { mutableLongStateOf(track.positionMs) }
+    val context = LocalContext.current
+    val liveMediaState by StandbyMediaListenerService.mediaState.collectAsState()
+    val hasNotificationAccess = remember(context) {
+        PermissionHelper.isNotificationListenerGranted(context)
+    }
+
+    val isRealSession = hasNotificationAccess && liveMediaState.hasActiveSession
+
+    val activeTrack = if (isRealSession) {
+        MediaTrack(
+            title = liveMediaState.trackTitle,
+            artist = liveMediaState.artistName.ifBlank { "Media Player" },
+            album = "Now Playing",
+            durationMs = liveMediaState.duration,
+            positionMs = liveMediaState.position,
+            isPlaying = liveMediaState.isPlaying
+        )
+    } else {
+        MediaTrack(
+            title = "Not Playing",
+            artist = "No active audio session",
+            album = "",
+            durationMs = 0L,
+            positionMs = 0L,
+            isPlaying = false
+        )
+    }
+
+    val activeIsPlaying = if (isRealSession) liveMediaState.isPlaying else false
+    var activePositionMs by remember(liveMediaState.position) { mutableLongStateOf(liveMediaState.position) }
 
     val isNightMode = StandbyTheme.isNightMode
     val activeAccent = if (isNightMode) NightRed else StandbyTheme.accentColor
 
-    // Live position ticking when actively playing
-    LaunchedEffect(isPlaying) {
-        while (isActive && isPlaying) {
+    // Live position ticking when actively playing real session
+    LaunchedEffect(activeIsPlaying, activeTrack.durationMs) {
+        while (isActive && activeIsPlaying && activeTrack.durationMs > 0) {
             delay(1000L)
-            if (currentPositionMs + 1000L >= track.durationMs) {
-                currentPositionMs = 0L // Loop track
-            } else {
-                currentPositionMs += 1000L
+            if (activePositionMs + 1000L < activeTrack.durationMs) {
+                activePositionMs += 1000L
             }
         }
     }
 
-    // Spin animation that ONLY runs when isPlaying == true
+    // Spin animation that ONLY runs when real media isPlaying == true
     var effectiveAngle by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(isPlaying) {
-        if (isPlaying) {
+    LaunchedEffect(activeIsPlaying) {
+        if (activeIsPlaying) {
             var lastTime = androidx.compose.runtime.withFrameNanos { it }
             while (isActive) {
                 val currentTime = androidx.compose.runtime.withFrameNanos { it }
@@ -143,65 +173,107 @@ fun MusicPlayerWidget(
     ) {
         val compactMode = isCompact ?: (maxWidth < 420.dp)
 
-        if (compactMode) {
+        if (!hasNotificationAccess) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable { PermissionHelper.openNotificationListenerSettings(context) }
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "🎵 CONNECT MEDIA SYNC",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            letterSpacing = 0.08.em,
+                            color = if (isNightMode) NightRed else AccentOrange
+                        )
+                    )
+                    Text(
+                        text = "Tap to grant permission for Spotify & YouTube Music",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 13.sp,
+                            color = if (isNightMode) Color(0x99FF453A) else TextSecondary
+                        )
+                    )
+                }
+            }
+        } else if (compactMode) {
             CompactMusicPlayerLayout(
-                track = track,
-                isPlaying = isPlaying,
-                currentPositionMs = currentPositionMs,
-                rotationAngle = effectiveAngle,
+                track = activeTrack,
+                isPlaying = activeIsPlaying,
+                currentPositionMs = activePositionMs,
+                rotationAngle = if (activeIsPlaying) effectiveAngle else 0f,
                 isNightMode = isNightMode,
                 activeAccent = activeAccent,
-                onTogglePlay = { isPlaying = !isPlaying },
-                onSeek = { newFraction ->
-                    currentPositionMs = (newFraction * track.durationMs).toLong()
-                },
-                onPrev = { currentPositionMs = 0L },
-                onNext = {
-                    // Alternate track for demonstration
-                    track = if (track.title == "Midnight City") {
-                        MediaTrack(
-                            title = "Resonance",
-                            artist = "HOME",
-                            album = "Odyssey",
-                            durationMs = 212_000L,
-                            positionMs = 32_000L,
-                            isPlaying = true
-                        )
+                albumArtBitmap = if (isRealSession) liveMediaState.albumArtBitmap else null,
+                onTogglePlay = {
+                    val service = StandbyMediaListenerService.instance
+                    if (isRealSession) {
+                        if (liveMediaState.isPlaying) service?.pause() else service?.play()
                     } else {
-                        DEFAULT_MEDIA_TRACK
+                        service?.play()
                     }
-                    currentPositionMs = track.positionMs
-                    isPlaying = true
+                },
+                onSeek = { newFraction ->
+                    if (isRealSession && activeTrack.durationMs > 0) {
+                        val newPos = (newFraction * activeTrack.durationMs).toLong()
+                        activePositionMs = newPos
+                        StandbyMediaListenerService.instance?.seekTo(newPos)
+                    }
+                },
+                onPrev = {
+                    if (isRealSession) {
+                        StandbyMediaListenerService.instance?.skipToPrevious()
+                    }
+                },
+                onNext = {
+                    if (isRealSession) {
+                        StandbyMediaListenerService.instance?.skipToNext()
+                    }
                 }
             )
         } else {
             FullscreenMusicPlayerLayout(
-                track = track,
-                isPlaying = isPlaying,
-                currentPositionMs = currentPositionMs,
-                rotationAngle = effectiveAngle,
+                track = activeTrack,
+                isPlaying = activeIsPlaying,
+                currentPositionMs = activePositionMs,
+                rotationAngle = if (activeIsPlaying) effectiveAngle else 0f,
                 isNightMode = isNightMode,
                 activeAccent = activeAccent,
-                onTogglePlay = { isPlaying = !isPlaying },
-                onSeek = { newFraction ->
-                    currentPositionMs = (newFraction * track.durationMs).toLong()
-                },
-                onPrev = { currentPositionMs = 0L },
-                onNext = {
-                    track = if (track.title == "Midnight City") {
-                        MediaTrack(
-                            title = "Resonance",
-                            artist = "HOME",
-                            album = "Odyssey",
-                            durationMs = 212_000L,
-                            positionMs = 32_000L,
-                            isPlaying = true
-                        )
+                albumArtBitmap = if (isRealSession) liveMediaState.albumArtBitmap else null,
+                onTogglePlay = {
+                    val service = StandbyMediaListenerService.instance
+                    if (isRealSession) {
+                        if (liveMediaState.isPlaying) service?.pause() else service?.play()
                     } else {
-                        DEFAULT_MEDIA_TRACK
+                        service?.play()
                     }
-                    currentPositionMs = track.positionMs
-                    isPlaying = true
+                },
+                onSeek = { newFraction ->
+                    if (isRealSession && activeTrack.durationMs > 0) {
+                        val newPos = (newFraction * activeTrack.durationMs).toLong()
+                        activePositionMs = newPos
+                        StandbyMediaListenerService.instance?.seekTo(newPos)
+                    }
+                },
+                onPrev = {
+                    if (isRealSession) {
+                        StandbyMediaListenerService.instance?.skipToPrevious()
+                    }
+                },
+                onNext = {
+                    if (isRealSession) {
+                        StandbyMediaListenerService.instance?.skipToNext()
+                    }
                 }
             )
         }
@@ -219,6 +291,7 @@ private fun CompactMusicPlayerLayout(
     rotationAngle: Float,
     isNightMode: Boolean,
     activeAccent: Color,
+    albumArtBitmap: android.graphics.Bitmap? = null,
     onTogglePlay: () -> Unit,
     onSeek: (Float) -> Unit,
     onPrev: () -> Unit,
@@ -255,7 +328,8 @@ private fun CompactMusicPlayerLayout(
                     modifier = Modifier
                         .size(52.dp)
                         .align(Alignment.CenterStart),
-                    isNightMode = isNightMode
+                    isNightMode = isNightMode,
+                    bitmap = albumArtBitmap
                 )
             }
 
@@ -409,192 +483,294 @@ private fun FullscreenMusicPlayerLayout(
     rotationAngle: Float,
     isNightMode: Boolean,
     activeAccent: Color,
+    albumArtBitmap: android.graphics.Bitmap? = null,
     onTogglePlay: () -> Unit,
     onSeek: (Float) -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(36.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Left Column: Album Art + Spinning Vinyl Record
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier.size(200.dp),
-                contentAlignment = Alignment.Center
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isPortrait = maxHeight > maxWidth
+        if (isPortrait) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceEvenly
             ) {
-                // Vinyl Disc slipping out of sleeve
-                VinylRecordDisc(
-                    modifier = Modifier
-                        .size(190.dp)
-                        .offset(x = 32.dp)
-                        .rotate(rotationAngle),
-                    isNightMode = isNightMode
-                )
-
-                // Album Art Front Cover
-                AlbumArtCover(
-                    modifier = Modifier
-                        .size(180.dp)
-                        .offset(x = (-16).dp),
-                    isNightMode = isNightMode
-                )
-            }
-        }
-
-        // Right Column: Track Info, Scrub Bar, Controls
-        Column(
-            modifier = Modifier
-                .weight(1.2f)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.Center
-        ) {
-            // Track Title
-            Text(
-                text = track.title,
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 28.sp,
-                    letterSpacing = (-0.02).em,
-                    color = if (isNightMode) NightRed else TextPrimary
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            // Artist & Album
-            Text(
-                text = "${track.artist} — ${track.album}",
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 16.sp,
-                    color = if (isNightMode) Color(0xAAFF453A) else TextSecondary
-                ),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Scrub Bar
-            val progressFraction = if (track.durationMs > 0) {
-                (currentPositionMs.toFloat() / track.durationMs.toFloat()).coerceIn(0f, 1f)
-            } else {
-                0f
-            }
-
-            ScrubProgressBar(
-                progressFraction = progressFraction,
-                onSeek = onSeek,
-                activeAccent = activeAccent,
-                isNightMode = isNightMode,
-                heightDp = 8
-            )
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // Time Indicators
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = formatMediaDuration(currentPositionMs),
-                    style = TextStyle(
-                        fontFamily = FontFamily.Default,
-                        fontSize = 12.sp,
-                        color = if (isNightMode) Color(0x88FF453A) else TextTertiary
-                    )
-                )
-
-                val remainingMs = (track.durationMs - currentPositionMs).coerceAtLeast(0L)
-                Text(
-                    text = "-${formatMediaDuration(remainingMs)}",
-                    style = TextStyle(
-                        fontFamily = FontFamily.Default,
-                        fontSize = 12.sp,
-                        color = if (isNightMode) Color(0x88FF453A) else TextTertiary
-                    )
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Media Controls (⏮, ⏯, ⏭)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.SkipPrevious,
-                    contentDescription = "Previous Track",
-                    tint = if (isNightMode) Color(0xCCFF453A) else TextSecondary,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .clickable { 
-                            StandbyMediaListenerService.instance?.skipToPrevious()
-                            onPrev()
-                        }
-                        .padding(6.dp)
-                )
-
-                Spacer(modifier = Modifier.width(28.dp))
-
+                // Vinyl + Album Cover in Portrait
                 Box(
-                    modifier = Modifier
-                        .size(54.dp)
-                        .clip(CircleShape)
-                        .background(if (isNightMode) NightRedDim else StandbyCardBgSecondary)
-                        .border(
-                            1.5.dp,
-                            if (isNightMode) NightRed else StandbyBorder,
-                            CircleShape
-                        )
-                        .clickable {
-                            val service = StandbyMediaListenerService.instance
-                            if (service != null) {
-                                if (isPlaying) service.pause() else service.play()
-                            }
-                            onTogglePlay()
-                        },
+                    modifier = Modifier.size(190.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = if (isNightMode) NightRed else TextPrimary,
-                        modifier = Modifier.size(28.dp)
+                    VinylRecordDisc(
+                        modifier = Modifier
+                            .size(175.dp)
+                            .offset(x = 26.dp)
+                            .rotate(rotationAngle),
+                        isNightMode = isNightMode
+                    )
+                    AlbumArtCover(
+                        modifier = Modifier
+                            .size(165.dp)
+                            .offset(x = (-12).dp),
+                        isNightMode = isNightMode,
+                        bitmap = albumArtBitmap
                     )
                 }
 
-                Spacer(modifier = Modifier.width(28.dp))
+                // Track Info, Scrub Bar, Controls
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    Text(
+                        text = track.title,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 24.sp,
+                            letterSpacing = (-0.02).em,
+                            color = if (isNightMode) NightRed else TextPrimary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${track.artist} — ${track.album}",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontSize = 14.sp,
+                            color = if (isNightMode) Color(0xAAFF453A) else TextSecondary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
-                Icon(
-                    imageVector = Icons.Filled.SkipNext,
-                    contentDescription = "Next Track",
-                    tint = if (isNightMode) Color(0xCCFF453A) else TextSecondary,
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .clickable { 
-                            StandbyMediaListenerService.instance?.skipToNext()
-                            onNext()
+                    val progressFraction = if (track.durationMs > 0) {
+                        (currentPositionMs.toFloat() / track.durationMs.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ScrubProgressBar(
+                            progressFraction = progressFraction,
+                            onSeek = onSeek,
+                            activeAccent = activeAccent,
+                            isNightMode = isNightMode,
+                            heightDp = 8
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = formatMediaDuration(currentPositionMs),
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = if (isNightMode) Color(0x88FF453A) else TextTertiary
+                                )
+                            )
+                            Text(
+                                text = "-${formatMediaDuration((track.durationMs - currentPositionMs).coerceAtLeast(0L))}",
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = if (isNightMode) Color(0x88FF453A) else TextTertiary
+                                )
+                            )
                         }
-                        .padding(6.dp)
-                )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.SkipPrevious,
+                            contentDescription = "Previous Track",
+                            tint = if (isNightMode) Color(0xCCFF453A) else TextSecondary,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable { onPrev() }
+                                .padding(6.dp)
+                        )
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(if (isNightMode) NightRedDim else StandbyCardBgSecondary)
+                                .border(1.5.dp, if (isNightMode) NightRed else StandbyBorder, CircleShape)
+                                .clickable { onTogglePlay() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = if (isNightMode) NightRed else TextPrimary,
+                                modifier = Modifier.size(30.dp)
+                            )
+                        }
+                        Icon(
+                            imageVector = Icons.Filled.SkipNext,
+                            contentDescription = "Next Track",
+                            tint = if (isNightMode) Color(0xCCFF453A) else TextSecondary,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable { onNext() }
+                                .padding(6.dp)
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 24.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(36.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(modifier = Modifier.size(200.dp), contentAlignment = Alignment.Center) {
+                        VinylRecordDisc(
+                            modifier = Modifier
+                                .size(190.dp)
+                                .offset(x = 32.dp)
+                                .rotate(rotationAngle),
+                            isNightMode = isNightMode
+                        )
+                        AlbumArtCover(
+                            modifier = Modifier
+                                .size(180.dp)
+                                .offset(x = (-16).dp),
+                            isNightMode = isNightMode,
+                            bitmap = albumArtBitmap
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.weight(1.2f).fillMaxHeight(),
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = track.title,
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 28.sp,
+                            letterSpacing = (-0.02).em,
+                            color = if (isNightMode) NightRed else TextPrimary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "${track.artist} — ${track.album}",
+                        style = TextStyle(
+                            fontFamily = FontFamily.Default,
+                            fontWeight = FontWeight.Normal,
+                            fontSize = 15.sp,
+                            color = if (isNightMode) Color(0xAAFF453A) else TextSecondary
+                        ),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    val progressFraction = if (track.durationMs > 0) {
+                        (currentPositionMs.toFloat() / track.durationMs.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ScrubProgressBar(
+                            progressFraction = progressFraction,
+                            onSeek = onSeek,
+                            activeAccent = activeAccent,
+                            isNightMode = isNightMode,
+                            heightDp = 8
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = formatMediaDuration(currentPositionMs),
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = if (isNightMode) Color(0x88FF453A) else TextTertiary
+                                )
+                            )
+                            Text(
+                                text = "-${formatMediaDuration((track.durationMs - currentPositionMs).coerceAtLeast(0L))}",
+                                style = TextStyle(
+                                    fontSize = 12.sp,
+                                    color = if (isNightMode) Color(0x88FF453A) else TextTertiary
+                                )
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.SkipPrevious,
+                            contentDescription = "Previous Track",
+                            tint = if (isNightMode) Color(0xCCFF453A) else TextSecondary,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable { onPrev() }
+                                .padding(6.dp)
+                        )
+                        Spacer(modifier = Modifier.width(28.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(CircleShape)
+                                .background(if (isNightMode) NightRedDim else StandbyCardBgSecondary)
+                                .border(1.5.dp, if (isNightMode) NightRed else StandbyBorder, CircleShape)
+                                .clickable { onTogglePlay() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                contentDescription = if (isPlaying) "Pause" else "Play",
+                                tint = if (isNightMode) NightRed else TextPrimary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(28.dp))
+                        Icon(
+                            imageVector = Icons.Filled.SkipNext,
+                            contentDescription = "Next Track",
+                            tint = if (isNightMode) Color(0xCCFF453A) else TextSecondary,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable { onNext() }
+                                .padding(6.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -606,7 +782,8 @@ private fun FullscreenMusicPlayerLayout(
 @Composable
 private fun AlbumArtCover(
     modifier: Modifier = Modifier,
-    isNightMode: Boolean
+    isNightMode: Boolean,
+    bitmap: android.graphics.Bitmap? = null
 ) {
     val shape = RoundedCornerShape(12.dp)
     val gradientColors = if (isNightMode) {
@@ -626,17 +803,25 @@ private fun AlbumArtCover(
             ),
         contentAlignment = Alignment.Center
     ) {
-        // Minimalist vinyl sleeve label / icon
-        Text(
-            text = "♪",
-            style = TextStyle(
-                fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.Black,
-                fontSize = 11.sp,
-                letterSpacing = 0.1.em,
-                color = if (isNightMode) Color(0xCCFF453A) else Color(0xDDFFFFFF)
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Album Art",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
             )
-        )
+        } else {
+            Text(
+                text = "♪",
+                style = TextStyle(
+                    fontFamily = FontFamily.Default,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 11.sp,
+                    letterSpacing = 0.1.em,
+                    color = if (isNightMode) Color(0xCCFF453A) else Color(0xDDFFFFFF)
+                )
+            )
+        }
     }
 }
 

@@ -63,6 +63,12 @@ import kotlinx.coroutines.isActive
  * @param events Custom list of events; defaults to [CalendarRepository.getUpcomingEvents].
  * @param onEventClick Optional callback when an event card is clicked.
  */
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
 @Composable
 fun ScheduleWidget(
     modifier: Modifier = Modifier,
@@ -74,9 +80,15 @@ fun ScheduleWidget(
     
     val keyguardManager = remember(context) { context.getSystemService(Context.KEYGUARD_SERVICE) as KeyguardManager }
     val isLocked = remember(context) { keyguardManager.isDeviceLocked }
-    val hasPermission = remember(context) { repository.hasCalendarPermission() }
+    
+    var hasPermission by remember { mutableStateOf(repository.hasCalendarPermission()) }
+    val calendarLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasPermission = granted
+    }
 
-    val eventList = events ?: remember(context) {
+    val eventList = events ?: remember(context, hasPermission, isLocked) {
         if (isLocked || !hasPermission) emptyList() else repository.getUpcomingEvents()
     }
 
@@ -97,7 +109,14 @@ fun ScheduleWidget(
             .padding(14.dp)
     ) {
         if (eventList.isEmpty()) {
-            EmptyScheduleView(isNightMode = isNightMode, isLocked = isLocked, hasPermission = hasPermission)
+            EmptyScheduleView(
+                isNightMode = isNightMode,
+                isLocked = isLocked,
+                hasPermission = hasPermission,
+                onRequestPermission = {
+                    calendarLauncher.launch(Manifest.permission.READ_CALENDAR)
+                }
+            )
         } else {
             val nextEvent = eventList.first()
             val timelineEvents = eventList.drop(1)
@@ -357,15 +376,28 @@ private fun TimelineEventRow(
  * Placeholder view when no events are scheduled.
  */
 @Composable
-private fun EmptyScheduleView(isNightMode: Boolean, isLocked: Boolean, hasPermission: Boolean) {
-    val message = when {
-        isLocked -> "Unlock phone to sync calendar"
-        !hasPermission -> "Grant Calendar Access"
-        else -> "No Upcoming Events"
+private fun EmptyScheduleView(
+    isNightMode: Boolean,
+    isLocked: Boolean,
+    hasPermission: Boolean,
+    onRequestPermission: () -> Unit = {}
+) {
+    val title = when {
+        isLocked -> "CALENDAR LOCKED"
+        !hasPermission -> "📅 CONNECT CALENDAR"
+        else -> "NO EVENTS TODAY"
+    }
+
+    val subtitle = when {
+        isLocked -> "Unlock device to sync calendar"
+        !hasPermission -> "Tap to grant calendar access"
+        else -> "Your schedule is clear"
     }
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(enabled = !hasPermission && !isLocked) { onRequestPermission() },
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -373,21 +405,21 @@ private fun EmptyScheduleView(isNightMode: Boolean, isLocked: Boolean, hasPermis
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "CALENDAR",
+                text = title,
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
                     letterSpacing = 0.08.em,
-                    color = if (isNightMode) NightRed else TextTertiary
+                    color = if (isNightMode) NightRed else if (!hasPermission) com.hoandesign.standby.ui.theme.AccentOrange else TextTertiary
                 )
             )
             Text(
-                text = message,
+                text = subtitle,
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Medium,
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                     color = if (isNightMode) Color(0x99FF453A) else TextSecondary
                 )
             )

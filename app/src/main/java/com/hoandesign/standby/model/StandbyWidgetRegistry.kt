@@ -2,6 +2,7 @@ package com.hoandesign.standby.model
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,8 +10,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -116,207 +122,569 @@ object StandbyWidgetRegistry {
     @Composable
     fun RenderFullscreen(widgetId: StandbyWidgetId, accentColor: Color, modifier: Modifier = Modifier) {
         when (widgetId) {
-            StandbyWidgetId.ANALOG_CLOCK -> FullscreenAnalogClock(modifier)
-            StandbyWidgetId.RETRO_FLIP_CLOCK -> FullscreenDigitalClock(modifier)
-            StandbyWidgetId.WEATHER -> FullscreenWeather(modifier)
-            StandbyWidgetId.MONTH_CALENDAR -> FullscreenMonthCalendar(modifier)
-            StandbyWidgetId.AGENDA -> FullscreenSchedule(modifier)
-            StandbyWidgetId.SYSTEM_BENTO -> FullscreenStocks(modifier)
-            StandbyWidgetId.VIBES -> FullscreenHealth(modifier)
-            StandbyWidgetId.DESK_TIMER -> FullscreenTimers(modifier)
-            StandbyWidgetId.PHOTO_FRAME -> FullscreenPhotoFrame(modifier)
-            StandbyWidgetId.SOLAR_ARC_CLOCK -> FullscreenWorldClock(modifier)
-            StandbyWidgetId.BIG_DIGITAL_CLOCK -> BigDigitalClockWidget(accentColor = accentColor, modifier = modifier)
+            StandbyWidgetId.ANALOG_CLOCK -> AnalogClockWidget(modifier = modifier.fillMaxSize().padding(16.dp))
+            StandbyWidgetId.BIG_DIGITAL_CLOCK -> BigDigitalClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
+            StandbyWidgetId.RETRO_FLIP_CLOCK -> RetroFlipClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
+            StandbyWidgetId.RADIAL_CLOCK -> RadialClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
+            StandbyWidgetId.SOLAR_ARC_CLOCK -> SolarArcClockWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
+            StandbyWidgetId.WEATHER -> FullscreenWeather(modifier = modifier)
+            StandbyWidgetId.MONTH_CALENDAR -> FullscreenMonthCalendar(modifier = modifier)
+            StandbyWidgetId.AGENDA -> FullscreenSchedule(modifier = modifier)
             StandbyWidgetId.BATTERY -> BatteryWidget(isFullscreen = true, modifier = modifier)
             StandbyWidgetId.MUSIC_PLAYER -> MusicPlayerWidget(isCompact = false, modifier = modifier)
-            StandbyWidgetId.RADIAL_CLOCK -> RadialClockWidget(accentColor = accentColor, modifier = modifier)
+            StandbyWidgetId.SYSTEM_BENTO -> FullscreenSystemBento(accentColor = accentColor, modifier = modifier)
+            StandbyWidgetId.DESK_TIMER -> FullscreenDeskTimer(accentColor = accentColor, modifier = modifier)
+            StandbyWidgetId.VIBES -> FullscreenVibes(accentColor = accentColor, modifier = modifier)
+            StandbyWidgetId.PHOTO_FRAME -> PhotoFrameWidget(modifier = modifier.fillMaxSize())
         }
     }
 }
 
+/**
+ * Fullscreen live weather station powered by Open-Meteo and device GPS geocoding.
+ * Adapts between vertical stacked layout (Portrait) and dual-column dashboard (Landscape).
+ */
 @Composable
-fun FullscreenAnalogClock(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-        Box(modifier = Modifier.size(300.dp).border(4.dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
-            Text("12", color = Color.White, fontSize = 24.sp, modifier = Modifier.align(Alignment.TopCenter).padding(8.dp))
-            Text("3", color = Color.White, fontSize = 24.sp, modifier = Modifier.align(Alignment.CenterEnd).padding(8.dp))
-            Text("6", color = Color.White, fontSize = 24.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(8.dp))
-            Text("9", color = Color.White, fontSize = 24.sp, modifier = Modifier.align(Alignment.CenterStart).padding(8.dp))
-            Box(modifier = Modifier.width(4.dp).height(120.dp).background(Color.White).align(Alignment.BottomCenter).offset(y = (-150).dp))
-            Box(modifier = Modifier.width(2.dp).height(140.dp).background(Color(0xFFFFA500)).align(Alignment.BottomCenter).offset(y = (-150).dp))
-        }
-        Text("PST", color = Color.Gray, modifier = Modifier.align(Alignment.BottomStart).padding(32.dp))
-        Text("10:09", color = Color.White, fontSize = 32.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(32.dp))
-    }
-}
-
-@Composable
-fun FullscreenDigitalClock(modifier: Modifier = Modifier) {
+fun FullscreenWeather(
+    modifier: Modifier = Modifier,
+    repository: com.hoandesign.standby.data.WeatherRepository = androidx.compose.runtime.remember { com.hoandesign.standby.data.WeatherRepository() }
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val isNightMode = com.hoandesign.standby.ui.theme.StandbyTheme.isNightMode
-    val timeStr = androidx.compose.runtime.remember {
-        java.time.LocalTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm"))
+
+    var hasLocationPerm by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(com.hoandesign.standby.util.PermissionHelper.isLocationGranted(context))
     }
-    val dateStr = androidx.compose.runtime.remember {
-        java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ofPattern("EEE, MMM d")).uppercase()
+    var currentLat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableDoubleStateOf(37.7749) }
+    var currentLon by androidx.compose.runtime.remember { androidx.compose.runtime.mutableDoubleStateOf(-122.4194) }
+    var currentCity by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(if (hasLocationPerm) "Local Weather" else "Location Needed")
     }
 
-    Box(modifier = modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = timeStr,
-                fontSize = 120.sp,
-                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
-                fontWeight = FontWeight.Black,
-                fontFamily = com.hoandesign.standby.ui.theme.InterFontFamily,
-                letterSpacing = (-0.05).em,
-                style = if (isNightMode) {
-                    androidx.compose.ui.text.TextStyle(drawStyle = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f))
-                } else {
-                    androidx.compose.ui.text.TextStyle()
+    val locationLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val granted = perms[android.Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                perms[android.Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        hasLocationPerm = granted
+        if (granted) {
+            coroutineScope.launch {
+                val fresh = com.hoandesign.standby.data.location.LocationHelper.getFreshLocationAndCity(context)
+                if (fresh.first != null) {
+                    currentLat = fresh.first!!.latitude
+                    currentLon = fresh.first!!.longitude
                 }
-            )
-            Text(
-                text = dateStr,
-                fontSize = 24.sp,
-                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color(0xFFFFA500),
-                fontWeight = FontWeight.Bold,
-                fontFamily = com.hoandesign.standby.ui.theme.InterFontFamily
-            )
-            Row(modifier = Modifier.padding(top = 16.dp)) {
-                AssistChip(onClick = {}, label = { Text("72° Sunny") })
-                Spacer(modifier = Modifier.width(8.dp))
-                AssistChip(onClick = {}, label = { Text("100% Battery") })
+                currentCity = fresh.second
+                repository.fetchWeather(currentLat, currentLon, currentCity)
+            }
+        }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(hasLocationPerm) {
+        if (hasLocationPerm) {
+            val fresh = com.hoandesign.standby.data.location.LocationHelper.getFreshLocationAndCity(context)
+            if (fresh.first != null) {
+                currentLat = fresh.first!!.latitude
+                currentLon = fresh.first!!.longitude
+            }
+            currentCity = fresh.second
+            repository.fetchWeather(currentLat, currentLon, currentCity)
+        }
+    }
+
+    val weatherFlow = androidx.compose.runtime.remember(repository, currentLat, currentLon, currentCity) {
+        repository.weatherFlow(currentLat, currentLon, currentCity)
+    }
+    val weather by weatherFlow.collectAsState(initial = repository.getCachedWeather())
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(com.hoandesign.standby.ui.theme.OledBlack)
+            .padding(20.dp)
+    ) {
+        val isPortrait = maxHeight > maxWidth
+
+        if (!hasLocationPerm) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clickable {
+                        locationLauncher.launch(
+                            arrayOf(
+                                android.Manifest.permission.ACCESS_FINE_LOCATION,
+                                android.Manifest.permission.ACCESS_COARSE_LOCATION
+                            )
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "📍 LIVE WEATHER ACCESS",
+                        color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.AccentOrange,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        letterSpacing = 0.08.em
+                    )
+                    Text(
+                        text = "Tap to grant location permission & view real local weather",
+                        color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
+                        fontSize = 13.sp
+                    )
+                }
+            }
+        } else if (isPortrait) {
+            // Portrait Layout: Stacked vertically
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Header: City, Condition, Temperature
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = weather.cityName.uppercase(),
+                                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.08.em
+                            )
+                            Text(
+                                text = weather.condition,
+                                color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                        Text(
+                            text = weather.iconEmoji,
+                            fontSize = 40.sp
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            text = "${weather.tempFahrenheit}°",
+                            fontSize = 68.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
+                            letterSpacing = (-0.03).em
+                        )
+                        Text(
+                            text = "H: ${weather.highTemp}°  L: ${weather.lowTemp}°",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isNightMode) Color(0xAAFF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                    }
+                }
+
+                // Hourly Forecast Horizontal Cards
+                if (weather.hourlyForecast.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "HOURLY FORECAST",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.08.em,
+                            color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary
+                        )
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(weather.hourlyForecast.size) { i ->
+                                val hour = weather.hourlyForecast[i]
+                                Column(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isNightMode) Color(0x18FF453A) else com.hoandesign.standby.ui.theme.StandbyCardBgSecondary)
+                                        .border(1.dp, if (isNightMode) com.hoandesign.standby.ui.theme.NightRedDim else com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(hour.timeLabel, fontSize = 11.sp, color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary)
+                                    Text(hour.conditionEmoji, fontSize = 18.sp)
+                                    Text("${hour.tempFahrenheit}°", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Daily 5-Day Forecast Rows
+                if (weather.dailyForecast.isNotEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(if (isNightMode) Color(0x18FF453A) else com.hoandesign.standby.ui.theme.StandbyCardBgSecondary)
+                            .border(1.dp, if (isNightMode) com.hoandesign.standby.ui.theme.NightRedDim else com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(16.dp))
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        weather.dailyForecast.take(5).forEach { day ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(day.dayLabel, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = if (isNightMode) Color(0xCCFF453A) else Color.White, modifier = Modifier.width(50.dp))
+                                Text(day.conditionEmoji, fontSize = 16.sp)
+                                Text("L: ${day.lowTempFahrenheit}°", fontSize = 12.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
+                                Text("H: ${day.highTempFahrenheit}°", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // Landscape Layout: Side-by-side
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(28.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Left Column: Current Weather
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = weather.cityName.uppercase(),
+                        color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.08.em
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "${weather.tempFahrenheit}°",
+                            fontSize = 80.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White,
+                            letterSpacing = (-0.03).em
+                        )
+                        Text(weather.iconEmoji, fontSize = 54.sp)
+                    }
+                    Text(
+                        text = "${weather.condition}  ·  H: ${weather.highTemp}°  L: ${weather.lowTemp}°",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary
+                    )
+                }
+
+                // Right Column: Hourly + 5-Day Forecast
+                Column(
+                    modifier = Modifier.weight(1.3f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Hourly
+                    if (weather.hourlyForecast.isNotEmpty()) {
+                        androidx.compose.foundation.lazy.LazyRow(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(weather.hourlyForecast.size) { i ->
+                                val hour = weather.hourlyForecast[i]
+                                Column(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(if (isNightMode) Color(0x18FF453A) else com.hoandesign.standby.ui.theme.StandbyCardBgSecondary)
+                                        .border(1.dp, if (isNightMode) com.hoandesign.standby.ui.theme.NightRedDim else com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(12.dp))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                                ) {
+                                    Text(hour.timeLabel, fontSize = 10.sp, color = if (isNightMode) Color(0x99FF453A) else com.hoandesign.standby.ui.theme.TextSecondary)
+                                    Text(hour.conditionEmoji, fontSize = 16.sp)
+                                    Text("${hour.tempFahrenheit}°", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                }
+                            }
+                        }
+                    }
+
+                    // 5-Day
+                    if (weather.dailyForecast.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(if (isNightMode) Color(0x18FF453A) else com.hoandesign.standby.ui.theme.StandbyCardBgSecondary)
+                                .border(1.dp, if (isNightMode) com.hoandesign.standby.ui.theme.NightRedDim else com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(14.dp))
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            weather.dailyForecast.take(4).forEach { day ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(day.dayLabel, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = if (isNightMode) Color(0xCCFF453A) else Color.White, modifier = Modifier.width(45.dp))
+                                    Text(day.conditionEmoji, fontSize = 14.sp)
+                                    Text("L: ${day.lowTempFahrenheit}°", fontSize = 11.sp, color = if (isNightMode) Color(0x88FF453A) else com.hoandesign.standby.ui.theme.TextTertiary)
+                                    Text("H: ${day.highTempFahrenheit}°", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else Color.White)
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-@Composable
-fun FullscreenWeather(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Color(0xFF1E1E1E)).padding(24.dp)) {
-        Text("72°", fontSize = 96.sp, color = Color.White, fontWeight = FontWeight.Bold)
-        Text("San Francisco | Sunny", color = Color.Gray, fontSize = 20.sp)
-        Spacer(modifier = Modifier.height(24.dp))
-        Row(modifier = Modifier.fillMaxWidth().height(64.dp).background(Color.DarkGray, RoundedCornerShape(16.dp))) {}
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Column(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp))) {}
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.DarkGray, RoundedCornerShape(16.dp)))
-                Spacer(modifier = Modifier.height(8.dp))
-                Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.DarkGray, RoundedCornerShape(16.dp)))
-            }
-        }
-    }
-}
-
+/**
+ * Fullscreen Month Calendar paired with upcoming agenda events.
+ * Adapts between vertical stacked layout (Portrait) and side-by-side (Landscape).
+ */
 @Composable
 fun FullscreenMonthCalendar(modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxSize().background(Color.Black)) {
-        Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(16.dp).background(Color.DarkGray, RoundedCornerShape(16.dp)))
-        Box(modifier = Modifier.weight(1f).fillMaxHeight().padding(16.dp).background(Color.DarkGray, RoundedCornerShape(16.dp)))
+    val month = androidx.compose.runtime.remember { com.hoandesign.standby.model.CalendarMonth.now() }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(com.hoandesign.standby.ui.theme.OledBlack)
+            .padding(16.dp)
+    ) {
+        val isPortrait = maxHeight > maxWidth
+
+        if (isPortrait) {
+            Column(
+                modifier = Modifier.fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
+                        .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(20.dp))
+                ) {
+                    MonthCalendarWidget(calendarMonth = month)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(0.9f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
+                        .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(20.dp))
+                ) {
+                    ScheduleWidget()
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
+                        .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(20.dp))
+                ) {
+                    MonthCalendarWidget(calendarMonth = month)
+                }
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
+                        .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(20.dp))
+                ) {
+                    ScheduleWidget()
+                }
+            }
+        }
     }
 }
 
+/**
+ * Fullscreen Schedule showing upcoming meetings and timeline.
+ */
 @Composable
 fun FullscreenSchedule(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Color.Black).padding(24.dp)) {
-        Text("Today's Agenda", fontSize = 32.sp, color = Color.White, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(16.dp))
-        Box(modifier = Modifier.fillMaxWidth().weight(1f).background(Color.DarkGray, RoundedCornerShape(16.dp))) {
-            Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Red).align(Alignment.Center))
-        }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(com.hoandesign.standby.ui.theme.OledBlack)
+            .padding(16.dp)
+    ) {
+        ScheduleWidget(modifier = Modifier.fillMaxSize())
     }
 }
 
+/**
+ * Fullscreen real hardware telemetry (RAM, Storage, CPU, Battery).
+ */
 @Composable
-fun FullscreenStocks(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Color.Black).padding(24.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Markets", fontSize = 32.sp, color = Color.White, fontWeight = FontWeight.Bold)
-            Text("Vol: 1.2B", color = Color.Gray)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp)))
-            Spacer(modifier = Modifier.width(16.dp))
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp)))
-        }
-    }
+fun FullscreenSystemBento(accentColor: Color, modifier: Modifier = Modifier) {
+    SystemBentoWidget(modifier = modifier.fillMaxSize().padding(16.dp))
 }
 
+/**
+ * Interactive Fullscreen Desk Timer with circular progress arc and presets.
+ */
 @Composable
-fun FullscreenHealth(modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxSize().background(Color.Black).padding(24.dp)) {
-        Box(modifier = Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-            Box(modifier = Modifier.size(200.dp).border(16.dp, Color.Red, CircleShape))
-            Box(modifier = Modifier.size(150.dp).border(16.dp, Color.Green, CircleShape))
-            Box(modifier = Modifier.size(100.dp).border(16.dp, Color.Cyan, CircleShape))
-        }
-        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
-            Text("Steps: 8,240", color = Color.White, fontSize = 24.sp)
-            Text("Distance: 5.2 km", color = Color.White, fontSize = 24.sp)
-            Text("Cal: 420 kcal", color = Color.White, fontSize = 24.sp)
-            Text("BPM: 68", color = Color.White, fontSize = 24.sp)
-        }
-    }
+fun FullscreenDeskTimer(accentColor: Color, modifier: Modifier = Modifier) {
+    DeskTimerWidget(accentColor = accentColor, modifier = modifier.fillMaxSize().padding(16.dp))
 }
 
+/**
+ * Fullscreen Ambient Vibes and Soundscapes with soothing audio controls.
+ */
 @Composable
-fun FullscreenTimers(modifier: Modifier = Modifier) {
-    Row(modifier = modifier.fillMaxSize().background(Color.Black).padding(24.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-            Box(modifier = Modifier.size(200.dp).border(8.dp, Color(0xFFFFA500), CircleShape), contentAlignment = Alignment.Center) {
-                Text("14:59", fontSize = 48.sp, color = Color.White)
-            }
-            Row(modifier = Modifier.padding(top = 16.dp)) {
-                Button(onClick = {}) { Text("+1m") }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = {}) { Text("+5m") }
-            }
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
-            Box(modifier = Modifier.size(200.dp).border(8.dp, Color.Cyan, CircleShape), contentAlignment = Alignment.Center) {
-                Text("05:00", fontSize = 48.sp, color = Color.White)
-            }
-            Row(modifier = Modifier.padding(top = 16.dp)) {
-                Button(onClick = {}) { Text("+1m") }
-                Spacer(modifier = Modifier.width(8.dp))
-                Button(onClick = {}) { Text("+5m") }
-            }
-        }
-    }
+fun FullscreenVibes(accentColor: Color, modifier: Modifier = Modifier) {
+    VibesWidget(modifier = modifier.fillMaxSize().padding(16.dp))
 }
 
-@Composable
-fun FullscreenPhotoFrame(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize().background(Color.DarkGray)) {
-        Text("2026-09-20", color = Color.White, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp))
-        Text("Yosemite National Park", color = Color.White, modifier = Modifier.align(Alignment.BottomStart).padding(16.dp))
-    }
-}
-
+/**
+ * Fullscreen World Clock displaying real-time calculations for major timezones.
+ */
 @Composable
 fun FullscreenWorldClock(modifier: Modifier = Modifier) {
-    Column(modifier = modifier.fillMaxSize().background(Color.Black).padding(24.dp)) {
-        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-                Text("New York\n10:09 AM", color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-                Text("London\n3:09 PM", color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
+    val isNightMode = com.hoandesign.standby.ui.theme.StandbyTheme.isNightMode
+    val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a")
+
+    val localZone = java.time.ZoneId.systemDefault()
+    val localCity = localZone.id.substringAfterLast("/").replace("_", " ")
+    val now = java.time.Instant.now()
+
+    fun formatOffset(zone: java.time.ZoneId): String {
+        val totalSec = zone.rules.getOffset(now).totalSeconds
+        val hours = totalSec / 3600
+        val mins = Math.abs((totalSec % 3600) / 60)
+        return if (hours >= 0) {
+            if (mins == 0) "GMT+$hours" else String.format(java.util.Locale.US, "GMT+%d:%02d", hours, mins)
+        } else {
+            if (mins == 0) "GMT$hours" else String.format(java.util.Locale.US, "GMT%d:%02d", hours, mins)
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-                Text("Tokyo\n11:09 PM", color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Box(modifier = Modifier.weight(1f).fillMaxHeight().background(Color.DarkGray, RoundedCornerShape(16.dp)).padding(8.dp), contentAlignment = Alignment.Center) {
-                Text("Hanoi\n9:09 PM", color = Color.White, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+    }
+
+    val cities = listOf(
+        Pair(if (localCity.isNotBlank()) "Local ($localCity)" else "Local Device", localZone),
+        Pair("New York", java.time.ZoneId.of("America/New_York")),
+        Pair("London", java.time.ZoneId.of("Europe/London")),
+        Pair("Tokyo", java.time.ZoneId.of("Asia/Tokyo"))
+    )
+
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxSize()
+            .background(com.hoandesign.standby.ui.theme.OledBlack)
+            .padding(20.dp)
+    ) {
+        val isPortrait = maxHeight > maxWidth
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Text(
+                text = "WORLD CLOCK",
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                letterSpacing = 0.08.em,
+                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary
+            )
+
+            if (isPortrait) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    cities.forEach { (cityName, zone) ->
+                        val zTime = java.time.ZonedDateTime.now(zone)
+                        val offsetLabel = formatOffset(zone)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
+                                .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(16.dp))
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text(cityName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(offsetLabel, fontSize = 12.sp, color = com.hoandesign.standby.ui.theme.TextSecondary)
+                            }
+                            Text(
+                                text = zTime.format(timeFormatter),
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.AccentOrange
+                            )
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    cities.chunked(2).forEach { colCities ->
+                        Column(
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            colCities.forEach { (cityName, zone) ->
+                                val zTime = java.time.ZonedDateTime.now(zone)
+                                val offsetLabel = formatOffset(zone)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
+                                        .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(16.dp))
+                                        .padding(horizontal = 18.dp, vertical = 10.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(cityName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                        Text(offsetLabel, fontSize = 11.sp, color = com.hoandesign.standby.ui.theme.TextSecondary)
+                                    }
+                                    Text(
+                                        text = zTime.format(timeFormatter),
+                                        fontSize = 20.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.AccentOrange
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

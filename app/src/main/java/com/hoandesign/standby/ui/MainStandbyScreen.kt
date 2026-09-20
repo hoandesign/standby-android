@@ -1,6 +1,9 @@
 package com.hoandesign.standby.ui
 
+import android.Manifest
 import android.content.Context
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -60,6 +63,7 @@ import com.hoandesign.standby.model.NightModeState
 import com.hoandesign.standby.model.StandbyWidgetId
 import com.hoandesign.standby.model.StandbyWidgetRegistry
 import com.hoandesign.standby.receiver.ChargingReceiver
+import com.hoandesign.standby.util.PermissionHelper
 import com.hoandesign.standby.ui.components.NightModeFilterContainer
 import com.hoandesign.standby.ui.components.WidgetPickerSheet
 import com.hoandesign.standby.ui.components.pixelShift
@@ -343,6 +347,24 @@ private fun QuickSettingsModal(
     onCustomizeSlots: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = LocalContext.current
+    var hasLocation by remember { mutableStateOf(PermissionHelper.isLocationGranted(context)) }
+    var hasCalendar by remember { mutableStateOf(PermissionHelper.isCalendarGranted(context)) }
+    var hasMedia by remember { mutableStateOf(PermissionHelper.isNotificationListenerGranted(context)) }
+
+    val locationLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        hasLocation = perms[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+    }
+
+    val calendarLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasCalendar = granted
+    }
+
     AnimatedVisibility(
         visible = visible,
         enter = fadeIn() + slideInVertically { it / 3 },
@@ -462,6 +484,74 @@ private fun QuickSettingsModal(
                             contentDescription = "Open",
                             tint = TextTertiary,
                             modifier = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Divider
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .background(StandbyBorder)
+                    )
+
+                    // Permissions & Real Data Sync Section
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "PERMISSIONS & REAL DATA",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+
+                        // Location & Live Weather
+                        DataSyncRow(
+                            icon = "📍",
+                            title = "Live Weather & GPS",
+                            status = if (hasLocation) "Connected" else "Connect",
+                            isGranted = hasLocation,
+                            accentColor = accentColor,
+                            onClick = {
+                                if (!hasLocation) {
+                                    locationLauncher.launch(
+                                        arrayOf(
+                                            Manifest.permission.ACCESS_FINE_LOCATION,
+                                            Manifest.permission.ACCESS_COARSE_LOCATION
+                                        )
+                                    )
+                                } else {
+                                    PermissionHelper.openAppSettings(context)
+                                }
+                            }
+                        )
+
+                        // Calendar & Agenda
+                        DataSyncRow(
+                            icon = "📅",
+                            title = "Calendar Agenda",
+                            status = if (hasCalendar) "Connected" else "Connect",
+                            isGranted = hasCalendar,
+                            accentColor = accentColor,
+                            onClick = {
+                                if (!hasCalendar) {
+                                    calendarLauncher.launch(Manifest.permission.READ_CALENDAR)
+                                } else {
+                                    PermissionHelper.openAppSettings(context)
+                                }
+                            }
+                        )
+
+                        // Media Session Sync
+                        DataSyncRow(
+                            icon = "🎵",
+                            title = "Spotify & Media Sync",
+                            status = if (hasMedia) "Connected" else "Connect",
+                            isGranted = hasMedia,
+                            accentColor = accentColor,
+                            onClick = {
+                                PermissionHelper.openNotificationListenerSettings(context)
+                            }
                         )
                     }
 
@@ -623,6 +713,64 @@ private fun QuickSettingsModal(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Clean glassmorphic status row for managing real data and runtime permissions.
+ */
+@Composable
+private fun DataSyncRow(
+    icon: String,
+    title: String,
+    status: String,
+    isGranted: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(StandbyCardBg)
+            .border(1.dp, if (isGranted) StandbyBorder else accentColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(text = icon, fontSize = 16.sp)
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimary
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isGranted) Color(0x2230D158) else accentColor.copy(alpha = 0.18f))
+                .border(
+                    1.dp,
+                    if (isGranted) Color(0xFF30D158) else accentColor,
+                    RoundedCornerShape(8.dp)
+                )
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = status,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isGranted) Color(0xFF30D158) else accentColor
+            )
         }
     }
 }

@@ -4,21 +4,15 @@ import java.util.Locale
 
 /**
  * Immutable representation of a music or media playback track.
- *
- * @param title Track name (default: "Midnight City").
- * @param artist Performing artist name (default: "M83").
- * @param album Album name (default: "Hurry Up, We're Dreaming").
- * @param durationMs Total duration of track in milliseconds (default: 244_000 ms / 4:04).
- * @param positionMs Current playback position in milliseconds (default: 88_000 ms / 1:28).
- * @param isPlaying True if track is actively playing, false if paused.
+ * Defaults to idle state without mock or hardcoded titles.
  */
 data class MediaTrack(
-    val title: String = "Midnight City",
-    val artist: String = "M83",
-    val album: String = "Hurry Up, We're Dreaming",
-    val durationMs: Long = 244_000L,
-    val positionMs: Long = 88_000L,
-    val isPlaying: Boolean = true
+    val title: String = "Not Playing",
+    val artist: String = "No active audio session",
+    val album: String = "",
+    val durationMs: Long = 0L,
+    val positionMs: Long = 0L,
+    val isPlaying: Boolean = false
 ) {
     /**
      * Fractional playback progress from 0.0f to 1.0f.
@@ -48,13 +42,13 @@ fun formatMediaDuration(millis: Long): String {
 }
 
 /**
- * Built-in default sample track for instant aesthetic out-of-the-box experience.
+ * Default empty idle track when no media is actively playing.
  */
 val DEFAULT_MEDIA_TRACK = MediaTrack(
-    title = "Midnight City",
-    artist = "M83",
-    album = "Hurry Up, We're Dreaming",
-    durationMs = 244_000L,
-    positionMs = 88_000L,
-    isPlaying = true
+    title = "Not Playing",
+    artist = "No active audio session",
+    album = "",
+    durationMs = 0L,
+    positionMs = 0L,
+    isPlaying = false
 )

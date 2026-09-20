@@ -148,15 +148,29 @@ class SensorsAndWidgetsTest {
     @Test
     fun testWeatherState_defaultsAndProperties() {
         val defaultWeather = WeatherState()
-        assertEquals(24, defaultWeather.tempCelsius)
-        assertEquals(76, defaultWeather.tempFahrenheit)
-        assertEquals("Partly Cloudy", defaultWeather.condition)
-        assertEquals("⛅", defaultWeather.iconEmoji)
-        assertEquals(82, defaultWeather.highTemp)
-        assertEquals(68, defaultWeather.lowTemp)
-        assertEquals(28, defaultWeather.aqi)
-        assertEquals(10, defaultWeather.precipitationChance)
-        assertEquals("Cupertino", defaultWeather.cityName)
+        assertEquals(0, defaultWeather.tempCelsius)
+        assertEquals(0, defaultWeather.tempFahrenheit)
+        assertEquals("Location Needed", defaultWeather.condition)
+        assertEquals("📍", defaultWeather.iconEmoji)
+        assertEquals(0, defaultWeather.highTemp)
+        assertEquals(0, defaultWeather.lowTemp)
+        assertEquals(0, defaultWeather.aqi)
+        assertEquals(0, defaultWeather.precipitationChance)
+        assertEquals("Location Needed", defaultWeather.cityName)
+
+        val liveWeather = WeatherState(
+            tempCelsius = 26,
+            tempFahrenheit = 78,
+            condition = "Sunny",
+            iconEmoji = "☀️",
+            highTemp = 85,
+            lowTemp = 72,
+            aqi = 35,
+            precipitationChance = 5,
+            cityName = "Tokyo"
+        )
+        assertEquals(26, liveWeather.tempCelsius)
+        assertEquals("Tokyo", liveWeather.cityName)
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -254,8 +268,18 @@ class SensorsAndWidgetsTest {
 
     @Test
     fun testMediaTrack_progressPercentageCalculation() {
-        // Default sample track: Midnight City (244s, position 88s)
-        val track = DEFAULT_MEDIA_TRACK
+        val defaultTrack = DEFAULT_MEDIA_TRACK
+        assertEquals("Not Playing", defaultTrack.title)
+        assertFalse(defaultTrack.isPlaying)
+
+        val track = MediaTrack(
+            title = "Midnight City",
+            artist = "M83",
+            album = "Hurry Up, We're Dreaming",
+            durationMs = 244_000L,
+            positionMs = 88_000L,
+            isPlaying = true
+        )
         assertEquals("Midnight City", track.title)
         assertEquals("M83", track.artist)
         assertEquals("Hurry Up, We're Dreaming", track.album)

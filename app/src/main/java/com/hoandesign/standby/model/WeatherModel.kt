@@ -15,16 +15,34 @@ import kotlin.math.roundToInt
  * @param precipitationChance Precipitation percentage probability (0 - 100).
  * @param cityName Name of the observed city or location.
  */
+data class HourlyForecast(
+    val timeLabel: String,
+    val tempCelsius: Int,
+    val tempFahrenheit: Int,
+    val conditionEmoji: String
+)
+
+data class DailyForecast(
+    val dayLabel: String,
+    val highTempCelsius: Int,
+    val lowTempCelsius: Int,
+    val highTempFahrenheit: Int,
+    val lowTempFahrenheit: Int,
+    val conditionEmoji: String
+)
+
 data class WeatherState(
-    val tempCelsius: Int = 24,
-    val tempFahrenheit: Int = 76,
-    val condition: String = "Partly Cloudy",
-    val iconEmoji: String = "⛅",
-    val highTemp: Int = 82,
-    val lowTemp: Int = 68,
-    val aqi: Int = 28,
-    val precipitationChance: Int = 10,
-    val cityName: String = "Cupertino"
+    val tempCelsius: Int = 0,
+    val tempFahrenheit: Int = 0,
+    val condition: String = "Location Needed",
+    val iconEmoji: String = "📍",
+    val highTemp: Int = 0,
+    val lowTemp: Int = 0,
+    val aqi: Int = 0,
+    val precipitationChance: Int = 0,
+    val cityName: String = "Location Needed",
+    val hourlyForecast: List<HourlyForecast> = emptyList(),
+    val dailyForecast: List<DailyForecast> = emptyList()
 )
 
 /**

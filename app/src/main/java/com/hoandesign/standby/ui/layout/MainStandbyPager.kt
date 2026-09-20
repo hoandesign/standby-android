@@ -256,11 +256,15 @@ fun MainStandbyPager(
                                             .weight(1f)
                                             .fillMaxWidth()
                                     ) {
+                                        val isPortrait = archetype == LayoutArchetype.TALL_PORTRAIT
+                                        val slot1Title = if (isPortrait) "TOP BENTO" else "LEFT BENTO"
+                                        val slot2Title = if (isPortrait) "BOTTOM BENTO" else "RIGHT BENTO"
+
                                         AdaptiveStandbyLayout(
                                             slot1 = {
                                                 DynamicSlotCard(
                                                     slotIndex = 0,
-                                                    slotTitle = "LEFT BENTO",
+                                                    slotTitle = slot1Title,
                                                     widgetIds = safeLeftIds,
                                                     pagerState = leftPagerState,
                                                     accentColor = accentColor,
@@ -280,7 +284,7 @@ fun MainStandbyPager(
                                             slot2 = {
                                                 DynamicSlotCard(
                                                     slotIndex = 1,
-                                                    slotTitle = "RIGHT BENTO",
+                                                    slotTitle = slot2Title,
                                                     widgetIds = safeRightIds,
                                                     pagerState = rightPagerState,
                                                     accentColor = accentColor,

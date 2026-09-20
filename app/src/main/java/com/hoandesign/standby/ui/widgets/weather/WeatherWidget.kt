@@ -71,6 +71,12 @@ import kotlinx.coroutines.launch
  * @param repository Weather repository instance; defaults to remember singleton.
  * @param initialWeather Optional override for test or preview states.
  */
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.LaunchedEffect
+import com.hoandesign.standby.util.PermissionHelper
+
 @Composable
 fun WeatherWidget(
     modifier: Modifier = Modifier,
@@ -80,12 +86,47 @@ fun WeatherWidget(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     
-    val locationData = remember(context) { LocationHelper.getCurrentLocationAndCity(context) }
-    val lat = locationData.first?.latitude ?: 37.7749
-    val lon = locationData.first?.longitude ?: -122.4194
-    val cityName = locationData.second
+    var hasLocationPerm by remember {
+        mutableStateOf(PermissionHelper.isLocationGranted(context))
+    }
+    var currentLat by remember { mutableStateOf(37.7749) }
+    var currentLon by remember { mutableStateOf(-122.4194) }
+    var currentCity by remember { mutableStateOf(if (hasLocationPerm) "Local Weather" else "Location Needed") }
+
+    val locationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms ->
+        val granted = perms[Manifest.permission.ACCESS_FINE_LOCATION] == true ||
+                perms[Manifest.permission.ACCESS_COARSE_LOCATION] == true
+        hasLocationPerm = granted
+        if (granted) {
+            coroutineScope.launch {
+                val fresh = LocationHelper.getFreshLocationAndCity(context)
+                if (fresh.first != null) {
+                    currentLat = fresh.first!!.latitude
+                    currentLon = fresh.first!!.longitude
+                }
+                currentCity = fresh.second
+                repository.fetchWeather(currentLat, currentLon, currentCity)
+            }
+        }
+    }
+
+    LaunchedEffect(hasLocationPerm) {
+        if (hasLocationPerm) {
+            val fresh = LocationHelper.getFreshLocationAndCity(context)
+            if (fresh.first != null) {
+                currentLat = fresh.first!!.latitude
+                currentLon = fresh.first!!.longitude
+            }
+            currentCity = fresh.second
+            repository.fetchWeather(currentLat, currentLon, currentCity)
+        }
+    }
     
-    val weatherFlow = remember(repository, lat, lon, cityName) { repository.weatherFlow(lat, lon, cityName) }
+    val weatherFlow = remember(repository, currentLat, currentLon, currentCity) { 
+        repository.weatherFlow(currentLat, currentLon, currentCity) 
+    }
     val observedState by weatherFlow.collectAsState(initial = repository.getCachedWeather())
     val weather = initialWeather ?: observedState
 
@@ -97,10 +138,19 @@ fun WeatherWidget(
             .fillMaxSize()
             .background(OledBlack)
             .clickable {
-                // Tap toggles temperature unit and triggers a background refresh
-                showCelsius = !showCelsius
-                coroutineScope.launch {
-                    repository.fetchWeather(lat, lon, cityName)
+                if (!hasLocationPerm) {
+                    locationLauncher.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                } else {
+                    // Tap toggles temperature unit and triggers a background refresh
+                    showCelsius = !showCelsius
+                    coroutineScope.launch {
+                        repository.fetchWeather(currentLat, currentLon, currentCity)
+                    }
                 }
             }
             .padding(14.dp)
@@ -119,17 +169,17 @@ fun WeatherWidget(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
-                        text = weather.cityName.uppercase(),
+                        text = if (!hasLocationPerm) "📍 TAP TO ENABLE" else weather.cityName.uppercase(),
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
                             letterSpacing = 0.08.em,
-                            color = if (isNightMode) NightRed else TextTertiary
+                            color = if (isNightMode) NightRed else if (!hasLocationPerm) com.hoandesign.standby.ui.theme.AccentOrange else TextTertiary
                         )
                     )
                     Text(
-                        text = weather.condition,
+                        text = if (!hasLocationPerm) "Grant location permission" else weather.condition,
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.SemiBold,
@@ -141,7 +191,7 @@ fun WeatherWidget(
 
                 // Weather Icon Emoji
                 Text(
-                    text = weather.iconEmoji,
+                    text = if (!hasLocationPerm) "📍" else weather.iconEmoji,
                     fontSize = if (availableHeight < 140.dp) 24.sp else 32.sp
                 )
             }
@@ -154,7 +204,7 @@ fun WeatherWidget(
             ) {
                 // Prominent Temperature
                 AnimatedContent(
-                    targetState = if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°",
+                    targetState = if (!hasLocationPerm) "--°" else (if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"),
                     transitionSpec = { fadeIn() togetherWith fadeOut() },
                     label = "TempUnitTransition"
                 ) { displayTemp ->
@@ -176,8 +226,8 @@ fun WeatherWidget(
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                     modifier = Modifier.padding(bottom = 6.dp)
                 ) {
-                    val highVal = if (showCelsius) ((weather.highTemp - 32) * 5 / 9) else weather.highTemp
-                    val lowVal = if (showCelsius) ((weather.lowTemp - 32) * 5 / 9) else weather.lowTemp
+                    val highVal = if (!hasLocationPerm) "--" else (if (showCelsius) ((weather.highTemp - 32) * 5 / 9).toString() else weather.highTemp.toString())
+                    val lowVal = if (!hasLocationPerm) "--" else (if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString())
 
                     Text(
                         text = "H: $highVal°",
@@ -227,7 +277,7 @@ fun WeatherWidget(
                             .background(aqiAccent)
                     )
                     Text(
-                        text = "AQI ${weather.aqi} · Good",
+                        text = if (!hasLocationPerm) "AQI --" else "AQI ${weather.aqi} · Good",
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Medium,
@@ -255,7 +305,7 @@ fun WeatherWidget(
                         fontSize = 10.sp
                     )
                     Text(
-                        text = "${weather.precipitationChance}%",
+                        text = if (!hasLocationPerm) "--%" else "${weather.precipitationChance}%",
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.SemiBold,

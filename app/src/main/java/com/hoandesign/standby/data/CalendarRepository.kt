@@ -38,18 +38,15 @@ class CalendarRepository(
 
     /**
      * Retrieves upcoming calendar events. Queries [CalendarContract.Events] if permission
-     * is granted and returns system events. If permission is lacking, an error occurs, or
-     * no upcoming events exist, falls back gracefully to high-fidelity sample events.
+     * is granted and returns real system events. If permission is lacking or no events
+     * are scheduled, returns an empty list. Never returns fake mock events.
      */
     fun getUpcomingEvents(baseTimeMillis: Long = System.currentTimeMillis()): List<CalendarEvent> {
         val ctx = context
         if (ctx != null && hasCalendarPermission()) {
-            val systemEvents = querySystemEvents(ctx, baseTimeMillis)
-            if (systemEvents.isNotEmpty()) {
-                return systemEvents
-            }
+            return querySystemEvents(ctx, baseTimeMillis)
         }
-        return getSampleEvents(baseTimeMillis)
+        return emptyList()
     }
 
     /**

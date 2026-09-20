@@ -1,5 +1,7 @@
 package com.hoandesign.standby.ui.widgets.system
 
+import android.app.Activity
+import android.content.Context
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -16,12 +18,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -35,12 +37,14 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.hoandesign.standby.data.SystemTelemetryHelper
 import com.hoandesign.standby.ui.theme.AccentBlue
 import com.hoandesign.standby.ui.theme.AccentCyan
 import com.hoandesign.standby.ui.theme.AccentGreen
@@ -54,20 +58,18 @@ import com.hoandesign.standby.ui.theme.StandbyTheme
 import com.hoandesign.standby.ui.theme.TextPrimary
 import com.hoandesign.standby.ui.theme.TextSecondary
 import com.hoandesign.standby.ui.theme.TextTertiary
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 /**
- * System Bento Widget faithful to reference screenshot #4.
+ * System Bento Widget presenting live Android hardware metrics.
  *
- * Features:
- * - Connectivity status pills: Wi-Fi On (`📶`), Bluetooth Connected (`ᛒ`), Cell On (`5G`).
- * - Storage remaining circular progress ring (e.g. `153.07 GB Disk Remain · 39%`).
- * - RAM memory gauge pill (`8.4 / 12 GB`).
- * - Quick brightness slider for bedside ambient illumination control.
- * - Full OLED pitch-black contrast and Red Night Mode compatibility.
- *
- * @param modifier Root modifier.
- * @param initialBrightness Initial brightness slider value (0.0f - 1.0f).
- * @param onBrightnessChange Optional listener when brightness slider moves.
+ * Real Data Features:
+ * - Live Connectivity Status: Real Wi-Fi, Bluetooth, and Cellular detection.
+ * - Live Storage: Real disk metrics from StatFs (used vs available GB & %).
+ * - Live RAM: Real memory usage from ActivityManager.MemoryInfo.
+ * - Live Brightness: Real-time window brightness slider control.
+ * - OLED pitch-black contrast and Red Night Mode compatibility.
  */
 @Composable
 fun SystemBentoWidget(
@@ -75,15 +77,25 @@ fun SystemBentoWidget(
     initialBrightness: Float = 0.75f,
     onBrightnessChange: ((Float) -> Unit)? = null
 ) {
-    var wifiEnabled by remember { mutableStateOf(true) }
-    var bluetoothConnected by remember { mutableStateOf(true) }
-    var cellEnabled by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    var storage by remember { mutableStateOf(SystemTelemetryHelper.getStorageMetrics()) }
+    var memory by remember { mutableStateOf(SystemTelemetryHelper.getMemoryMetrics(context)) }
+    var connectivity by remember { mutableStateOf(SystemTelemetryHelper.getNetworkConnectivity(context)) }
     var brightness by remember { mutableFloatStateOf(initialBrightness) }
+
+    // Periodically refresh telemetry every 10 seconds
+    LaunchedEffect(Unit) {
+        while (isActive) {
+            storage = SystemTelemetryHelper.getStorageMetrics()
+            memory = SystemTelemetryHelper.getMemoryMetrics(context)
+            connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
+            delay(10_000L)
+        }
+    }
 
     val isNightMode = StandbyTheme.isNightMode
     val activeAccent = if (isNightMode) NightRed else AccentPurple
     val ringTrackColor = if (isNightMode) Color(0x22FF453A) else StandbyCardBgSecondary
-    val ringBorderColor = if (isNightMode) NightRedDim else StandbyBorder
 
     BoxWithConstraints(
         modifier = modifier
@@ -97,7 +109,7 @@ fun SystemBentoWidget(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            // Header Row: Connectivity Pills (Wi-Fi, Bluetooth, Cell)
+            // Header Row: Live Connectivity Pills (Wi-Fi, Bluetooth, Cell)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -106,45 +118,53 @@ fun SystemBentoWidget(
                 // Wi-Fi Pill
                 ConnectivityPill(
                     icon = "📶",
-                    label = "Wi-Fi",
-                    isActive = wifiEnabled,
+                    label = if (connectivity.isWifiActive) "Wi-Fi" else "Off",
+                    isActive = connectivity.isWifiActive,
                     accentColor = if (isNightMode) NightRed else AccentCyan,
                     isNightMode = isNightMode,
-                    onClick = { wifiEnabled = !wifiEnabled },
+                    onClick = {
+                        connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
+                    },
                     modifier = Modifier.weight(1f)
                 )
 
                 // Bluetooth Pill
                 ConnectivityPill(
                     icon = "ᛒ",
-                    label = "BT",
-                    isActive = bluetoothConnected,
+                    label = if (connectivity.isBluetoothActive) "BT" else "Off",
+                    isActive = connectivity.isBluetoothActive,
                     accentColor = if (isNightMode) NightRed else AccentBlue,
                     isNightMode = isNightMode,
-                    onClick = { bluetoothConnected = !bluetoothConnected },
+                    onClick = {
+                        connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
+                    },
                     modifier = Modifier.weight(1f)
                 )
 
                 // Cell Pill
                 ConnectivityPill(
-                    icon = "5G",
-                    label = "Cell",
-                    isActive = cellEnabled,
+                    icon = if (connectivity.isCellularActive) "5G" else "Cell",
+                    label = if (connectivity.isCellularActive) "Active" else "Standby",
+                    isActive = connectivity.isCellularActive || connectivity.isConnected,
                     accentColor = if (isNightMode) NightRed else AccentGreen,
                     isNightMode = isNightMode,
-                    onClick = { cellEnabled = !cellEnabled },
+                    onClick = {
+                        connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // Center: Disk Storage Progress Ring & RAM Info
+            // Center: Live Disk Storage Progress Ring & RAM Info
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                // Circular Ring (Used 61%, Remaining 39%)
+                // Circular Ring: Real Storage Usage Fraction
                 val ringSize = if (availableHeight < 150.dp) 52.dp else 64.dp
+                val usedRatio = (storage.usedPercent / 100f).coerceIn(0f, 1f)
+
                 Box(
                     modifier = Modifier.size(ringSize),
                     contentAlignment = Alignment.Center
@@ -166,11 +186,11 @@ fun SystemBentoWidget(
                             style = Stroke(width = strokeWidth)
                         )
 
-                        // Active progress arc (used 61%)
+                        // Active progress arc reflecting actual storage used
                         drawArc(
                             color = activeAccent,
                             startAngle = -90f,
-                            sweepAngle = 360f * 0.61f,
+                            sweepAngle = 360f * usedRatio,
                             useCenter = false,
                             topLeft = arcTopLeft,
                             size = arcSize,
@@ -179,7 +199,7 @@ fun SystemBentoWidget(
                     }
 
                     Text(
-                        text = "39%",
+                        text = "${storage.remainPercent}%",
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
@@ -189,13 +209,13 @@ fun SystemBentoWidget(
                     )
                 }
 
-                // Storage & RAM Details
+                // Live Storage & RAM Details
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     Text(
-                        text = "153.07 GB",
+                        text = storage.availableGbFormatted,
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontWeight = FontWeight.Bold,
@@ -205,7 +225,7 @@ fun SystemBentoWidget(
                     )
 
                     Text(
-                        text = "Disk Remain · 39%",
+                        text = "Free · of ${storage.totalGbFormatted}",
                         style = TextStyle(
                             fontFamily = FontFamily.Default,
                             fontSize = 11.sp,
@@ -213,7 +233,7 @@ fun SystemBentoWidget(
                         )
                     )
 
-                    // RAM Gauge Mini Bar
+                    // RAM Gauge Mini Bar with real memory metrics
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -228,7 +248,7 @@ fun SystemBentoWidget(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth(0.70f)
+                                    .fillMaxWidth(memory.usedRatio)
                                     .height(4.dp)
                                     .clip(RoundedCornerShape(2.dp))
                                     .background(if (isNightMode) NightRed else AccentCyan)
@@ -236,7 +256,7 @@ fun SystemBentoWidget(
                         }
 
                         Text(
-                            text = "RAM 8.4 / 12 GB",
+                            text = "RAM ${memory.usedGbFormatted} / ${memory.totalGbFormatted}",
                             style = TextStyle(
                                 fontFamily = FontFamily.Default,
                                 fontSize = 10.sp,
@@ -247,7 +267,7 @@ fun SystemBentoWidget(
                 }
             }
 
-            // Bottom: Brightness Quick-Slider
+            // Bottom: Brightness Quick-Slider with live window brightness adjustment
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -272,6 +292,11 @@ fun SystemBentoWidget(
                     onValueChange = { newVal ->
                         brightness = newVal
                         onBrightnessChange?.invoke(newVal)
+                        (context as? Activity)?.window?.let { win ->
+                            val lp = win.attributes
+                            lp.screenBrightness = newVal.coerceIn(0.01f, 1.0f)
+                            win.attributes = lp
+                        }
                     },
                     modifier = Modifier.weight(1f),
                     colors = SliderDefaults.colors(

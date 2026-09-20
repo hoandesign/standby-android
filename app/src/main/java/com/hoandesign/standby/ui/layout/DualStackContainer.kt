@@ -110,31 +110,31 @@ fun DualStackContainer(
             }
         }
     } else {
-        // TALL_PORTRAIT: Column with 4:5 vertical proportions
-        val contentPadding = 16.dp
-        val gutterHeight = 16.dp
+        // TALL_PORTRAIT: Symmetrical, balanced vertical dual cards
+        val gutterHeight = 14.dp
+        val portraitCornerRadius = 28.dp
 
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(contentPadding),
+                .padding(horizontal = 20.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(gutterHeight),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             StandbyCardContainer(
                 modifier = Modifier
-                    .weight(4f)
+                    .weight(1f)
                     .fillMaxWidth(),
-                cornerRadius = cornerRadius
+                cornerRadius = portraitCornerRadius
             ) {
                 slot1()
             }
 
             StandbyCardContainer(
                 modifier = Modifier
-                    .weight(5f)
+                    .weight(1f)
                     .fillMaxWidth(),
-                cornerRadius = cornerRadius
+                cornerRadius = portraitCornerRadius
             ) {
                 slot2()
             }

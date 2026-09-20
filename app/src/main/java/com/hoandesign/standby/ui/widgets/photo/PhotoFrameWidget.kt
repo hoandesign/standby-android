@@ -1,5 +1,9 @@
 package com.hoandesign.standby.ui.widgets.photo
 
+import android.graphics.BitmapFactory
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.RepeatMode
@@ -8,12 +12,14 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -22,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,7 +39,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -45,6 +56,7 @@ import com.hoandesign.standby.ui.theme.NightRedDim
 import com.hoandesign.standby.ui.theme.OledBlack
 import com.hoandesign.standby.ui.theme.StandbyBorder
 import com.hoandesign.standby.ui.theme.StandbyCardBg
+import com.hoandesign.standby.ui.theme.StandbyCardBgSecondary
 import com.hoandesign.standby.ui.theme.StandbyTheme
 import com.hoandesign.standby.ui.theme.TextPrimary
 import com.hoandesign.standby.ui.theme.TextSecondary
@@ -67,14 +79,15 @@ enum class AmbientScene(val sceneName: String) {
 
 /**
  * Ambient Photo Frame Widget providing an artistic digital picture frame experience
- * with slow Ken Burns pan/zoom animation and elegant date/time overlay.
+ * with slow Ken Burns pan/zoom animation, real gallery photo picking, and elegant date/time overlay.
  *
  * Features:
+ * - Real user gallery photo integration via standard Android Photo Picker.
  * - Subtle Ken Burns slow camera drift (scale 1.0f to 1.12f, continuous translation).
- * - Curated artistic atmospheric landscape scenes (Mountain Dusk, Aurora, Coastal Sunset, Misty Forest).
+ * - Curated artistic atmospheric landscape scenes when no custom photo is chosen.
  * - Elegant glassmorphic date/time badge with live second updates.
  * - Deep crimson OLED preservation in Night Mode.
- * - Tap to cycle between ambient photo scenes.
+ * - Tap to cycle scenes, button to pick local pictures.
  *
  * @param modifier Root modifier.
  * @param initialScene Initial landscape scene.
@@ -84,9 +97,29 @@ fun PhotoFrameWidget(
     modifier: Modifier = Modifier,
     initialScene: AmbientScene = AmbientScene.MOUNTAIN_DUSK
 ) {
+    val context = LocalContext.current
     var currentScene by remember { mutableIntStateOf(initialScene.ordinal) }
     val scenes = AmbientScene.entries
     val isNightMode = StandbyTheme.isNightMode
+
+    var userCustomBitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            try {
+                context.contentResolver.openInputStream(uri)?.use { stream ->
+                    val bmp = BitmapFactory.decodeStream(stream)
+                    if (bmp != null) {
+                        userCustomBitmap = bmp.asImageBitmap()
+                    }
+                }
+            } catch (_: Exception) {
+                // Ignore load error
+            }
+        }
+    }
 
     // Real-time date & time ticking
     val currentDateTime by produceState(initialValue = ZonedDateTime.now()) {
@@ -135,27 +168,41 @@ fun PhotoFrameWidget(
             .clip(RoundedCornerShape(20.dp))
             .background(OledBlack)
             .clickable {
-                // Tap advances to next photo scene
-                currentScene = (currentScene + 1) % scenes.size
+                // Tap advances to next photo scene or cycles back from custom photo
+                if (userCustomBitmap != null) {
+                    userCustomBitmap = null
+                } else {
+                    currentScene = (currentScene + 1) % scenes.size
+                }
             }
     ) {
-        // Ken Burns animated photo canvas container
+        // Ken Burns animated photo container
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .scale(scaleAnim)
                 .offset { IntOffset(panXAnim.roundToInt(), panYAnim.roundToInt()) }
         ) {
-            Crossfade(
-                targetState = scenes[currentScene],
-                animationSpec = tween(1000),
-                label = "SceneCrossfade"
-            ) { scene ->
-                SceneCanvas(
-                    scene = scene,
-                    isNightMode = isNightMode,
+            val custom = userCustomBitmap
+            if (custom != null) {
+                Image(
+                    bitmap = custom,
+                    contentDescription = "User Photo",
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
+            } else {
+                Crossfade(
+                    targetState = scenes[currentScene],
+                    animationSpec = tween(1000),
+                    label = "SceneCrossfade"
+                ) { scene ->
+                    SceneCanvas(
+                        scene = scene,
+                        isNightMode = isNightMode,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
             }
         }
 
@@ -198,20 +245,51 @@ fun PhotoFrameWidget(
             }
         }
 
-        // Subtle scene name pill in top-right
-        Text(
-            text = scenes[currentScene].sceneName.uppercase(),
-            style = TextStyle(
-                fontFamily = FontFamily.Default,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 9.sp,
-                letterSpacing = 0.08.em,
-                color = if (isNightMode) Color(0x88FF453A) else Color(0x88FFFFFF)
-            ),
+        // Top-right action controls: Scene Name Pill & Photo Picker Button
+        Row(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(14.dp)
-        )
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Pick photo button
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(StandbyCardBgSecondary.copy(alpha = 0.85f))
+                    .border(1.dp, StandbyBorder, RoundedCornerShape(10.dp))
+                    .clickable {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    }
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
+            ) {
+                Text(
+                    text = if (userCustomBitmap != null) "🖼️ Custom" else "📷 Pick Photo",
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 10.sp,
+                        color = if (isNightMode) NightRed else Color.White
+                    )
+                )
+            }
+
+            if (userCustomBitmap == null) {
+                Text(
+                    text = scenes[currentScene].sceneName.uppercase(),
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 9.sp,
+                        letterSpacing = 0.08.em,
+                        color = if (isNightMode) Color(0x88FF453A) else Color(0x88FFFFFF)
+                    ),
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
     }
 }
 
@@ -274,7 +352,7 @@ private fun SceneCanvas(
                     lineTo(size.width * 0.22f, size.height * 0.60f)
                     lineTo(size.width * 0.52f, size.height * 0.75f)
                     lineTo(size.width * 0.82f, size.height * 0.54f)
-                    lineTo(size.width, size.height * 0.72f)
+                    lineTo(size.width * 0.72f, size.height * 0.72f)
                     lineTo(size.width, size.height)
                     lineTo(0f, size.height)
                     close()

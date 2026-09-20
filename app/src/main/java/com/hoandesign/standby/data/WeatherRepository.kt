@@ -23,15 +23,15 @@ class WeatherRepository {
 
     companion object {
         val DEFAULT_WEATHER = WeatherState(
-            tempCelsius = 24,
-            tempFahrenheit = 76,
-            condition = "Partly Cloudy",
-            iconEmoji = "⛅",
-            highTemp = 82,
-            lowTemp = 68,
-            aqi = 28,
-            precipitationChance = 10,
-            cityName = "Cupertino"
+            tempCelsius = 0,
+            tempFahrenheit = 0,
+            condition = "Location Needed",
+            iconEmoji = "📍",
+            highTemp = 0,
+            lowTemp = 0,
+            aqi = 0,
+            precipitationChance = 0,
+            cityName = "Location Needed"
         )
     }
 
@@ -58,12 +58,13 @@ class WeatherRepository {
     suspend fun fetchWeather(
         latitude: Double = 37.7749,
         longitude: Double = -122.4194,
-        cityName: String = "Cupertino"
+        cityName: String = "Local Weather"
     ): WeatherState = withContext(Dispatchers.IO) {
         val endpoint = "https://api.open-meteo.com/v1/forecast?" +
                 "latitude=$latitude&longitude=$longitude" +
                 "&current=temperature_2m,weather_code,precipitation_probability" +
-                "&daily=temperature_2m_max,temperature_2m_min" +
+                "&hourly=temperature_2m,weather_code" +
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min" +
                 "&timezone=auto"
 
         var connection: HttpURLConnection? = null
@@ -91,6 +92,8 @@ class WeatherRepository {
                     val daily = json.optJSONObject("daily")
                     val highMaxArray = daily?.optJSONArray("temperature_2m_max")
                     val lowMinArray = daily?.optJSONArray("temperature_2m_min")
+                    val dailyCodeArray = daily?.optJSONArray("weather_code")
+                    val dailyTimeArray = daily?.optJSONArray("time")
 
                     val highC = if (highMaxArray != null && highMaxArray.length() > 0) {
                         highMaxArray.optDouble(0, (tempC + 4).toDouble()).roundToInt()
@@ -104,6 +107,61 @@ class WeatherRepository {
                         tempC - 4
                     }
 
+                    // Parse hourly forecast (next 12 hours)
+                    val hourlyList = mutableListOf<com.hoandesign.standby.model.HourlyForecast>()
+                    val hourly = json.optJSONObject("hourly")
+                    if (hourly != null) {
+                        val times = hourly.optJSONArray("time")
+                        val temps = hourly.optJSONArray("temperature_2m")
+                        val codes = hourly.optJSONArray("weather_code")
+                        val limit = minOf(times?.length() ?: 0, temps?.length() ?: 0, codes?.length() ?: 0, 16)
+                        for (i in 0 until limit) {
+                            val timeStr = times?.optString(i) ?: ""
+                            val hourPart = timeStr.substringAfter("T", "").take(5)
+                            val tC = temps?.optDouble(i, 20.0)?.roundToInt() ?: 20
+                            val cWmo = codes?.optInt(i, 1) ?: 1
+                            val (_, cEmoji) = mapWmoCodeToCondition(cWmo)
+                            hourlyList.add(
+                                com.hoandesign.standby.model.HourlyForecast(
+                                    timeLabel = if (hourPart.isNotBlank()) hourPart else "${i}:00",
+                                    tempCelsius = tC,
+                                    tempFahrenheit = celsiusToFahrenheit(tC),
+                                    conditionEmoji = cEmoji
+                                )
+                            )
+                        }
+                    }
+
+                    // Parse daily forecast (next 5 days)
+                    val dailyList = mutableListOf<com.hoandesign.standby.model.DailyForecast>()
+                    if (daily != null && dailyTimeArray != null) {
+                        val daysCount = minOf(dailyTimeArray.length(), 7)
+                        for (d in 0 until daysCount) {
+                            val rawDate = dailyTimeArray.optString(d, "")
+                            val dayLabel = try {
+                                val parsedDate = java.time.LocalDate.parse(rawDate)
+                                parsedDate.dayOfWeek.name.take(3)
+                            } catch (_: Exception) {
+                                "DAY $d"
+                            }
+                            val dayHighC = highMaxArray?.optDouble(d, (tempC + 4).toDouble())?.roundToInt() ?: (tempC + 4)
+                            val dayLowC = lowMinArray?.optDouble(d, (tempC - 4).toDouble())?.roundToInt() ?: (tempC - 4)
+                            val dayWmo = dailyCodeArray?.optInt(d, 1) ?: 1
+                            val (_, dayEmoji) = mapWmoCodeToCondition(dayWmo)
+
+                            dailyList.add(
+                                com.hoandesign.standby.model.DailyForecast(
+                                    dayLabel = dayLabel,
+                                    highTempCelsius = dayHighC,
+                                    lowTempCelsius = dayLowC,
+                                    highTempFahrenheit = celsiusToFahrenheit(dayHighC),
+                                    lowTempFahrenheit = celsiusToFahrenheit(dayLowC),
+                                    conditionEmoji = dayEmoji
+                                )
+                            )
+                        }
+                    }
+
                     val parsedState = WeatherState(
                         tempCelsius = tempC,
                         tempFahrenheit = celsiusToFahrenheit(tempC),
@@ -111,9 +169,11 @@ class WeatherRepository {
                         iconEmoji = iconEmoji,
                         highTemp = celsiusToFahrenheit(highC),
                         lowTemp = celsiusToFahrenheit(lowC),
-                        aqi = cachedWeather.aqi, // AQI standard cached fallback
+                        aqi = cachedWeather.aqi,
                         precipitationChance = precipitation,
-                        cityName = cityName
+                        cityName = cityName,
+                        hourlyForecast = hourlyList,
+                        dailyForecast = dailyList
                     )
 
                     cachedWeather = parsedState

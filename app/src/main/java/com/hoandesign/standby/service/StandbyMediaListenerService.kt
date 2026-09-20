@@ -123,6 +123,10 @@ class StandbyMediaListenerService : NotificationListenerService() {
         activeController?.transportControls?.skipToPrevious()
     }
 
+    fun seekTo(positionMs: Long) {
+        activeController?.transportControls?.seekTo(positionMs)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         activeController?.unregisterCallback(mediaControllerCallback)
