@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "861595657257",
+    "project_id": "standby-8589f",
+    "storage_bucket": "standby-8589f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:861595657257:android:3dc85022c35bfad97ea838",
+        "android_client_info": {
+          "package_name": "com.hoandesign.standby"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDx2FUZ28xcYWB21BQomNaIsJPT00X5sO4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

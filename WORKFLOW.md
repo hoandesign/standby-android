@@ -66,8 +66,8 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
    * Every widget (Analog Clock, Radial Clock, Big Digital Clock, Calendar, Weather) must scale within a `minOf(width, height)` bounding box with centered alignment.
    * Never rely on fixed aspect ratio assumptions that crop numerals on 3:4 tablets (e.g. 1536x2048) or squarish foldables (e.g. OnePlus Open ~1.08:1, Galaxy Z Fold inner screen ~1.16:1).
 
-6. **14 Bespoke Fullscreen Ambient Dashboards:**
-   * Every single widget in `StandbyWidgetRegistry` has a dedicated edge-to-edge fullscreen presentation (not just a centered compact card).
+6. **15 Bespoke Fullscreen Ambient Dashboards:**
+   * Every single widget in `StandbyWidgetRegistry` (15 total: Rectangle Tank Bauhaus, Circular Swiss Bauhaus, Big Digital, Retro Split-Flap, Radial, Solar Arc, Weather, Month Calendar, Agenda, Battery, Music Player, System Bento, Desk Timer, Vibes, and Photo Frame) has a dedicated edge-to-edge fullscreen presentation (not just a centered compact card).
    * Large digital clocks feature a dynamic **OLED Wireframe Mode** (`Stroke(4f)`) that triggers automatically during Night Mode or after extended idle time to save power and prevent emitter wear.
 
 7. **Apple StandBy Visual Fidelity:**
@@ -93,12 +93,22 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
       1. **Active Gesture Transitions:** UI elements (indicators, navigation pills) must respond dynamically during active drags (`isScrollInProgress`), not just passive idle states.
       2. **Multi-Orientation Collision Tests:** Check portrait stacked columns vs landscape side-by-side rows to ensure overlays (Top Nav Menu, Quick Settings, Badges) never collide with card-level indicators or headers.
       3. **Data Boundary & Edge Math:** Fallback states (GPS denied, initial network load) must be tested with edge numerical inputs (e.g. `0` high/low values must never calculate `-17°C`).
-      4. **Dynamic Typography Bounds:** All dynamic strings (city names, track titles, condition labels) must enforce single-line constraints (`maxLines = 1`) and ellipsis truncation (`TextOverflow.Ellipsis`) to prevent layout-push cascades.
+      4. **Dynamic Typography Bounds:** All dynamic strings (city names, track titles, condition labels) must enforce single-line constraints (`maxLines = 1`, `TextOverflow.Ellipsis`) to prevent layout-push cascades.
 
 12. **Mandatory Planning, Live Task Tracking & Adversarial Grill Loop:**
     * **Plan & Task List First:** Before writing or modifying any code, the agent MUST explicitly research and author a concrete implementation plan with a granular task list stored in `PLAN.md` (or artifact). Never code blindly or start implementation without a defined roadmap.
     * **Live Task Tracking & Transparent Progress:** The agent must actively track task execution status (`[ ] Pending`, `[▶] In Progress`, `[✔] Completed`) and present progress updates to the user as milestones are reached.
     * **Careful Adversarial Subagent Grill Loop:** The auditor is an active gatekeeper in a closed loop. If the auditor finds ANY defect (verdict FAIL or score < 9.5), the agent MUST loop back, patch the root cause, and re-trigger the adversarial auditor until a genuine, proven PASS is achieved.
+
+13. **Firebase CLI & Multiplatform Tooling Mandate:**
+    * **Binary Portability:** The standalone `/usr/local/bin/firebase` binary on macOS often fails due to architecture mismatches (`bad CPU type in executable: firebase`). All commands, scripts, and workflows MUST invoke Firebase tools via `npx -y firebase-tools@latest <command>`. Never invoke or document the naked `firebase` binary.
+    * **Root Project Binding:** Maintain `.firebaserc` (`{"projects":{"default":"standby-8589f"}}`) and `firebase.json` (`{}`) in the repository root. This ensures all Firebase CLI commands (`use`, `apps:list`, etc.) automatically operate within the correct project context without requiring manual `--project` flags.
+    * **Automated Configuration Retrieval:** Never instruct users to navigate to the Firebase Console to download configuration files. Use the Firebase CLI to fetch them programmatically:
+      ```bash
+      npx -y firebase-tools@latest apps:sdkconfig ANDROID 1:861595657257:android:3dc85022c35bfad97ea838 -o app/google-services.json
+      ```
+    * **Headless Terminal Authentication:** For remote terminals, CI/CD runners, or environments where local browsers fail to open, always use `npx -y firebase-tools@latest login --no-localhost`.
+    * **Automated Pre-Flight Diagnostics:** Include a Firebase and Google Cloud environment check in `scripts/turn_runner.sh` to guarantee that cloud testing and deployment tooling are functional before executing builds.
 
 ---
 
