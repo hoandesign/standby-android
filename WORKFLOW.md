@@ -87,6 +87,14 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
     * Clock dials and bento widgets must adopt true continuous-curvature squircle geometry (superellipse / Lamé curve `(x/a)^4 + (y/b)^4 = 1`), dense perimeter ticks, 12 inward radial index rays, bold cardinal numerals (`12, 3, 6, 9`), clean baton hands, and hollow-center orange ring hub.
     * Weather displays must follow Apple StandBy's clean left-aligned vertical stack: City Name (Title Case) -> Monumental Temperature (100sp) -> Vector Weather Icon + Condition ("Sunny") + Daily Range ("H:91° L:62°"), borderless on pure pitch-black OLED.
 
+11. **The Anti-Rubber-Stamp Adversarial Audit Mandate:**
+    * The independent auditor must NEVER act as a passive checklist validator.
+    * Perfect scores (10/10) are PROHIBITED unless an adversarial stress-test passes across 4 critical failure domains:
+      1. **Active Gesture Transitions:** UI elements (indicators, navigation pills) must respond dynamically during active drags (`isScrollInProgress`), not just passive idle states.
+      2. **Multi-Orientation Collision Tests:** Check portrait stacked columns vs landscape side-by-side rows to ensure overlays (Top Nav Menu, Quick Settings, Badges) never collide with card-level indicators or headers.
+      3. **Data Boundary & Edge Math:** Fallback states (GPS denied, initial network load) must be tested with edge numerical inputs (e.g. `0` high/low values must never calculate `-17°C`).
+      4. **Dynamic Typography Bounds:** All dynamic strings (city names, track titles, condition labels) must enforce single-line constraints (`maxLines = 1`) and ellipsis truncation (`TextOverflow.Ellipsis`) to prevent layout-push cascades.
+
 ---
 
 ## 2. The 6-Step Autonomous "Do-Loop"

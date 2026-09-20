@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -149,8 +150,17 @@ fun WeatherWidget(
         val conditionFontSize = if (h < 150.dp) 15.sp else 19.sp
         val rangeFontSize = if (h < 150.dp) 13.sp else 16.sp
 
-        val highVal = if (!hasLocationPerm || weather.cityName == "Location Needed") (if (showCelsius) "32" else "91") else (if (showCelsius) ((weather.highTemp - 32) * 5 / 9).toString() else weather.highTemp.toString())
-        val lowVal = if (!hasLocationPerm || weather.cityName == "Location Needed") (if (showCelsius) "22" else "62") else (if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString())
+        val hasLiveHighLow = hasLocationPerm && weather.cityName != "Location Needed" && weather.highTemp != 0 && weather.lowTemp != 0
+        val highVal = if (!hasLiveHighLow) {
+            if (showCelsius) "32" else "91"
+        } else {
+            if (showCelsius) ((weather.highTemp - 32) * 5 / 9).toString() else weather.highTemp.toString()
+        }
+        val lowVal = if (!hasLiveHighLow) {
+            if (showCelsius) "22" else "62"
+        } else {
+            if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString()
+        }
 
         val displayCity = if (!hasLocationPerm) "Location Access" else if (weather.cityName == "Location Needed") "Cupertino" else weather.cityName
         val displayTemp = if (!hasLocationPerm || weather.cityName == "Location Needed") (if (showCelsius) "24°" else "63°") else (if (showCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°")
@@ -164,6 +174,8 @@ fun WeatherWidget(
             // 1. City Name (Title Case, Medium)
             Text(
                 text = displayCity,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Medium,
@@ -205,6 +217,8 @@ fun WeatherWidget(
             // 4. Condition Name (Bold)
             Text(
                 text = displayCondition,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 style = TextStyle(
                     fontFamily = FontFamily.Default,
                     fontWeight = FontWeight.Bold,

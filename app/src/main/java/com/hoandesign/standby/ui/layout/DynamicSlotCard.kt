@@ -89,9 +89,10 @@ fun DynamicSlotCard(
             }
         }
 
-        // Top-aligned slot stack indicator (floating overlay, auto-hiding with navigation)
+        // Top-aligned slot stack indicator (floating overlay, auto-hiding with navigation or active swipe)
+        val showSlotIndicator = widgetIds.size > 1 && !isEditMode && (isIndicatorVisible || pagerState.isScrollInProgress)
         AnimatedVisibility(
-            visible = widgetIds.size > 1 && !isEditMode && isIndicatorVisible,
+            visible = showSlotIndicator,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier

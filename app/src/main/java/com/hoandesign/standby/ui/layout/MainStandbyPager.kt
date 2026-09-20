@@ -423,14 +423,17 @@ fun MainStandbyPager(
                             )
                         }
 
-                        // Top-aligned stack indicator (floating overlay, auto-hiding with navigation)
+                        // Top-aligned stack indicator (floating overlay, auto-hiding with navigation or active swipe)
+                        val showSingleIndicator = allSingleWidgets.size > 1 && (isNavVisible || singleModulePagerState.isScrollInProgress)
+                        val singleIndicatorPadding = if (isNavVisible) 58.dp else 12.dp
+
                         AnimatedVisibility(
-                            visible = allSingleWidgets.size > 1 && isNavVisible,
+                            visible = showSingleIndicator,
                             enter = fadeIn(),
                             exit = fadeOut(),
                             modifier = Modifier
                                 .align(Alignment.TopCenter)
-                                .padding(top = 58.dp)
+                                .padding(top = singleIndicatorPadding)
                                 .zIndex(10f)
                         ) {
                             HorizontalPagerIndicator(
@@ -528,14 +531,18 @@ fun MainStandbyPager(
             }
         }
 
-        // Sleek iOS-style horizontal page indicator anchored at top edge (floating overlay, auto-hiding with navigation)
+        // Sleek iOS-style horizontal page indicator anchored at top edge (floating overlay, auto-hiding with navigation or active swipe)
+        val showHorizontalIndicator = (isNavVisible || isEditMode || horizontalPagerState.isScrollInProgress) &&
+                navigationState.displayMode == WidgetDisplayMode.DUAL
+        val indicatorTopPadding = if (isNavVisible || isEditMode) 58.dp else 12.dp
+
         AnimatedVisibility(
-            visible = (isNavVisible || isEditMode) && navigationState.displayMode == WidgetDisplayMode.DUAL,
+            visible = showHorizontalIndicator,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
                 .align(Alignment.TopCenter)
-                .padding(top = 58.dp)
+                .padding(top = indicatorTopPadding)
                 .zIndex(15f)
         ) {
             HorizontalPagerIndicator(

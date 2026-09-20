@@ -144,8 +144,8 @@ fun RectangleAnalogClockWidget(
                 val rOuter = rSquircle(angleRad, baseRadius, squircleExponent)
 
                 if (isCardinal) {
-                    // Short outer anchor ray at cardinal positions
-                    val rayLen = 14.dp.toPx()
+                    // Short outer anchor ray at cardinal positions (refined to 10dp for breathing space)
+                    val rayLen = 10.dp.toPx()
                     drawLine(
                         color = primaryColor,
                         start = Offset(center.x + (rOuter - rayLen) * cosA, center.y + (rOuter - rayLen) * sinA),
@@ -167,7 +167,7 @@ fun RectangleAnalogClockWidget(
             }
 
             // 3. Draw Bold Geometric Cardinal Numerals (12, 3, 6, 9)
-            val numFontSize = (baseRadius * 0.32f).coerceIn(20f, 68f).sp
+            val numFontSize = (baseRadius * 0.30f).coerceIn(20f, 64f).sp
             val numStyle = TextStyle(
                 fontFamily = FontFamily.Default,
                 fontWeight = FontWeight.Bold,
@@ -175,12 +175,14 @@ fun RectangleAnalogClockWidget(
                 color = primaryColor
             )
 
+            val numeralOffset = (baseRadius * 0.16f).coerceIn(18.dp.toPx(), 28.dp.toPx())
+
             // "12" Top
             val m12 = textMeasurer.measure("12", style = numStyle)
             val r12 = rSquircle(Math.toRadians(-90.0), baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m12,
-                topLeft = Offset(center.x - m12.size.width / 2f, center.y - r12 + 20.dp.toPx())
+                topLeft = Offset(center.x - m12.size.width / 2f, center.y - r12 + numeralOffset)
             )
 
             // "6" Bottom
@@ -188,7 +190,7 @@ fun RectangleAnalogClockWidget(
             val r6 = rSquircle(Math.toRadians(90.0), baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m6,
-                topLeft = Offset(center.x - m6.size.width / 2f, center.y + r6 - m6.size.height - 20.dp.toPx())
+                topLeft = Offset(center.x - m6.size.width / 2f, center.y + r6 - m6.size.height - numeralOffset)
             )
 
             // "9" Left
@@ -196,7 +198,7 @@ fun RectangleAnalogClockWidget(
             val r9 = rSquircle(Math.toRadians(180.0), baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m9,
-                topLeft = Offset(center.x - r9 + 20.dp.toPx(), center.y - m9.size.height / 2f)
+                topLeft = Offset(center.x - r9 + numeralOffset, center.y - m9.size.height / 2f)
             )
 
             // "3" Right
@@ -204,7 +206,7 @@ fun RectangleAnalogClockWidget(
             val r3 = rSquircle(0.0, baseRadius, squircleExponent)
             drawText(
                 textLayoutResult = m3,
-                topLeft = Offset(center.x + r3 - m3.size.width - 20.dp.toPx(), center.y - m3.size.height / 2f)
+                topLeft = Offset(center.x + r3 - m3.size.width - numeralOffset, center.y - m3.size.height / 2f)
             )
 
             // Optional subtle branding or date (if explicitly provided)
