@@ -56,8 +56,8 @@ class WeatherRepository {
      * seamlessly falls back to the cached default without throwing.
      */
     suspend fun fetchWeather(
-        latitude: Double = 37.7749,
-        longitude: Double = -122.4194,
+        latitude: Double,
+        longitude: Double,
         cityName: String = "Local Weather"
     ): WeatherState = withContext(Dispatchers.IO) {
         val endpoint = "https://api.open-meteo.com/v1/forecast?" +
@@ -190,19 +190,22 @@ class WeatherRepository {
     }
 
     /**
-     * Flow that emits the cached weather immediately, followed by periodic live updates.
+     * Flow that emits the cached weather immediately, followed by periodic live updates
+     * if valid GPS coordinates are provided.
      */
     fun weatherFlow(
-        latitude: Double = 37.7749,
-        longitude: Double = -122.4194,
-        cityName: String = "Cupertino",
+        latitude: Double?,
+        longitude: Double?,
+        cityName: String?,
         refreshIntervalMs: Long = 900_000L // 15 minutes
     ): Flow<WeatherState> = flow {
         emit(cachedWeather)
-        while (true) {
-            val updated = fetchWeather(latitude, longitude, cityName)
-            emit(updated)
-            delay(refreshIntervalMs)
+        if (latitude != null && longitude != null) {
+            while (true) {
+                val updated = fetchWeather(latitude, longitude, cityName ?: "Local Weather")
+                emit(updated)
+                delay(refreshIntervalMs)
+            }
         }
     }
 }

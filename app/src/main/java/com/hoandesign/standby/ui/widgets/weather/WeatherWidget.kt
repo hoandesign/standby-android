@@ -89,8 +89,8 @@ fun WeatherWidget(
     var hasLocationPerm by remember {
         mutableStateOf(PermissionHelper.isLocationGranted(context))
     }
-    var currentLat by remember { mutableStateOf(37.7749) }
-    var currentLon by remember { mutableStateOf(-122.4194) }
+    var currentLat by remember { mutableStateOf<Double?>(null) }
+    var currentLon by remember { mutableStateOf<Double?>(null) }
     var currentCity by remember { mutableStateOf(if (hasLocationPerm) "Local Weather" else "Location Needed") }
 
     val locationLauncher = rememberLauncherForActivityResult(
@@ -102,12 +102,13 @@ fun WeatherWidget(
         if (granted) {
             coroutineScope.launch {
                 val fresh = LocationHelper.getFreshLocationAndCity(context)
-                if (fresh.first != null) {
-                    currentLat = fresh.first!!.latitude
-                    currentLon = fresh.first!!.longitude
+                val loc = fresh.first
+                if (loc != null) {
+                    currentLat = loc.latitude
+                    currentLon = loc.longitude
+                    currentCity = fresh.second
+                    repository.fetchWeather(loc.latitude, loc.longitude, fresh.second)
                 }
-                currentCity = fresh.second
-                repository.fetchWeather(currentLat, currentLon, currentCity)
             }
         }
     }
@@ -115,12 +116,13 @@ fun WeatherWidget(
     LaunchedEffect(hasLocationPerm) {
         if (hasLocationPerm) {
             val fresh = LocationHelper.getFreshLocationAndCity(context)
-            if (fresh.first != null) {
-                currentLat = fresh.first!!.latitude
-                currentLon = fresh.first!!.longitude
+            val loc = fresh.first
+            if (loc != null) {
+                currentLat = loc.latitude
+                currentLon = loc.longitude
+                currentCity = fresh.second
+                repository.fetchWeather(loc.latitude, loc.longitude, fresh.second)
             }
-            currentCity = fresh.second
-            repository.fetchWeather(currentLat, currentLon, currentCity)
         }
     }
     
@@ -146,10 +148,13 @@ fun WeatherWidget(
                         )
                     )
                 } else {
-                    // Tap toggles temperature unit and triggers a background refresh
                     showCelsius = !showCelsius
                     coroutineScope.launch {
-                        repository.fetchWeather(currentLat, currentLon, currentCity)
+                        val lat = currentLat
+                        val lon = currentLon
+                        if (lat != null && lon != null) {
+                            repository.fetchWeather(lat, lon, currentCity)
+                        }
                     }
                 }
             }

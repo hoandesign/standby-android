@@ -156,8 +156,8 @@ fun FullscreenWeather(
     var hasLocationPerm by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(com.hoandesign.standby.util.PermissionHelper.isLocationGranted(context))
     }
-    var currentLat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableDoubleStateOf(37.7749) }
-    var currentLon by androidx.compose.runtime.remember { androidx.compose.runtime.mutableDoubleStateOf(-122.4194) }
+    var currentLat by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Double?>(null) }
+    var currentLon by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Double?>(null) }
     var currentCity by androidx.compose.runtime.remember {
         androidx.compose.runtime.mutableStateOf(if (hasLocationPerm) "Local Weather" else "Location Needed")
     }
@@ -171,12 +171,13 @@ fun FullscreenWeather(
         if (granted) {
             coroutineScope.launch {
                 val fresh = com.hoandesign.standby.data.location.LocationHelper.getFreshLocationAndCity(context)
-                if (fresh.first != null) {
-                    currentLat = fresh.first!!.latitude
-                    currentLon = fresh.first!!.longitude
+                val loc = fresh.first
+                if (loc != null) {
+                    currentLat = loc.latitude
+                    currentLon = loc.longitude
+                    currentCity = fresh.second
+                    repository.fetchWeather(loc.latitude, loc.longitude, fresh.second)
                 }
-                currentCity = fresh.second
-                repository.fetchWeather(currentLat, currentLon, currentCity)
             }
         }
     }
@@ -184,12 +185,13 @@ fun FullscreenWeather(
     androidx.compose.runtime.LaunchedEffect(hasLocationPerm) {
         if (hasLocationPerm) {
             val fresh = com.hoandesign.standby.data.location.LocationHelper.getFreshLocationAndCity(context)
-            if (fresh.first != null) {
-                currentLat = fresh.first!!.latitude
-                currentLon = fresh.first!!.longitude
+            val loc = fresh.first
+            if (loc != null) {
+                currentLat = loc.latitude
+                currentLon = loc.longitude
+                currentCity = fresh.second
+                repository.fetchWeather(loc.latitude, loc.longitude, fresh.second)
             }
-            currentCity = fresh.second
-            repository.fetchWeather(currentLat, currentLon, currentCity)
         }
     }
 
@@ -562,130 +564,4 @@ fun FullscreenDeskTimer(accentColor: Color, modifier: Modifier = Modifier) {
 @Composable
 fun FullscreenVibes(accentColor: Color, modifier: Modifier = Modifier) {
     VibesWidget(modifier = modifier.fillMaxSize().padding(16.dp))
-}
-
-/**
- * Fullscreen World Clock displaying real-time calculations for major timezones.
- */
-@Composable
-fun FullscreenWorldClock(modifier: Modifier = Modifier) {
-    val isNightMode = com.hoandesign.standby.ui.theme.StandbyTheme.isNightMode
-    val timeFormatter = java.time.format.DateTimeFormatter.ofPattern("h:mm a")
-
-    val localZone = java.time.ZoneId.systemDefault()
-    val localCity = localZone.id.substringAfterLast("/").replace("_", " ")
-    val now = java.time.Instant.now()
-
-    fun formatOffset(zone: java.time.ZoneId): String {
-        val totalSec = zone.rules.getOffset(now).totalSeconds
-        val hours = totalSec / 3600
-        val mins = Math.abs((totalSec % 3600) / 60)
-        return if (hours >= 0) {
-            if (mins == 0) "GMT+$hours" else String.format(java.util.Locale.US, "GMT+%d:%02d", hours, mins)
-        } else {
-            if (mins == 0) "GMT$hours" else String.format(java.util.Locale.US, "GMT%d:%02d", hours, mins)
-        }
-    }
-
-    val cities = listOf(
-        Pair(if (localCity.isNotBlank()) "Local ($localCity)" else "Local Device", localZone),
-        Pair("New York", java.time.ZoneId.of("America/New_York")),
-        Pair("London", java.time.ZoneId.of("Europe/London")),
-        Pair("Tokyo", java.time.ZoneId.of("Asia/Tokyo"))
-    )
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(com.hoandesign.standby.ui.theme.OledBlack)
-            .padding(20.dp)
-    ) {
-        val isPortrait = maxHeight > maxWidth
-
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            Text(
-                text = "WORLD CLOCK",
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp,
-                letterSpacing = 0.08.em,
-                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary
-            )
-
-            if (isPortrait) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    cities.forEach { (cityName, zone) ->
-                        val zTime = java.time.ZonedDateTime.now(zone)
-                        val offsetLabel = formatOffset(zone)
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
-                                .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(16.dp))
-                                .padding(horizontal = 20.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(cityName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                Text(offsetLabel, fontSize = 12.sp, color = com.hoandesign.standby.ui.theme.TextSecondary)
-                            }
-                            Text(
-                                text = zTime.format(timeFormatter),
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.AccentOrange
-                            )
-                        }
-                    }
-                }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    cities.chunked(2).forEach { colCities ->
-                        Column(
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
-                        ) {
-                            colCities.forEach { (cityName, zone) ->
-                                val zTime = java.time.ZonedDateTime.now(zone)
-                                val offsetLabel = formatOffset(zone)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(com.hoandesign.standby.ui.theme.StandbyCardBg)
-                                        .border(1.dp, com.hoandesign.standby.ui.theme.StandbyBorder, RoundedCornerShape(16.dp))
-                                        .padding(horizontal = 18.dp, vertical = 10.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text(cityName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                                        Text(offsetLabel, fontSize = 11.sp, color = com.hoandesign.standby.ui.theme.TextSecondary)
-                                    }
-                                    Text(
-                                        text = zTime.format(timeFormatter),
-                                        fontSize = 20.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.AccentOrange
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
