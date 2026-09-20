@@ -1,3 +1,4 @@
+import java.io.File
 import java.util.Properties
 
 plugins {
@@ -7,6 +8,7 @@ plugins {
 }
 
 val keystorePropertiesFile = listOf(
+  rootProject.file("keystore.properties"),
   file("keystore.properties"),
   file("${System.getProperty("user.home")}/Documents/Projects/my-moves-signing/keystore.properties")
 ).firstOrNull { it.exists() && it.canRead() }
@@ -27,17 +29,24 @@ android {
     applicationId = "com.hoandesign.standby"
     minSdk = 26
     targetSdk = 36
-    versionCode = 7
-    versionName = "1.0.6"
+    versionCode = 8
+    versionName = "1.0.7"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
 
   signingConfigs {
     create("release") {
-      val storePath = keystoreProperties.getProperty("storeFile")
-      if (!storePath.isNullOrBlank() && file(storePath).exists()) {
-        storeFile = file(storePath)
+      val rawStorePath = keystoreProperties.getProperty("storeFile")
+      val resolvedStoreFile = listOfNotNull(
+        rawStorePath?.let { rootProject.file(File(it).name) },
+        rootProject.file("my-moves-upload.jks"),
+        rawStorePath?.let { file(it) },
+        file("my-moves-upload.jks")
+      ).firstOrNull { it.exists() && it.canRead() }
+
+      if (resolvedStoreFile != null) {
+        storeFile = resolvedStoreFile
         storePassword = keystoreProperties.getProperty("storePassword")
         keyAlias = keystoreProperties.getProperty("keyAlias")
         keyPassword = keystoreProperties.getProperty("keyPassword")
