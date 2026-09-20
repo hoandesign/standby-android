@@ -268,15 +268,15 @@ fun MainStandbyScreen(
                         }
                     }
 
-                    // Top-End Quick Actions (Customize Bento & Settings)
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(top = 12.dp, end = 16.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (!isEditMode) {
+                    // Top-Center Quick Actions (Customize Bento & Settings) placed in gutter between bento cards
+                    if (!isEditMode) {
+                        Row(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             // Customize Bento button
                             Box(
                                 modifier = Modifier

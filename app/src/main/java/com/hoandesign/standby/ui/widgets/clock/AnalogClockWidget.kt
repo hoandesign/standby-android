@@ -59,7 +59,7 @@ import kotlin.math.sin
 @Composable
 fun AnalogClockWidget(
     modifier: Modifier = Modifier,
-    cityName: String = "CUPERTINO",
+    cityName: String = "",
     smoothSweep: Boolean = true,
     clockTime: ClockTime? = null
 ) {

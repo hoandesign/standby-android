@@ -488,7 +488,14 @@ private fun DynamicSlotCard(
     ) {
         VerticalPager(
             state = pagerState,
-            modifier = Modifier.fillMaxSize()
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    top = if (isEditMode) 38.dp else 0.dp,
+                    bottom = if (isEditMode) 36.dp else 0.dp,
+                    start = if (isEditMode) 10.dp else 0.dp,
+                    end = if (isEditMode) 10.dp else 0.dp
+                )
         ) { pageIndex ->
             if (pageIndex < widgetIds.size) {
                 val widgetId = widgetIds[pageIndex]
