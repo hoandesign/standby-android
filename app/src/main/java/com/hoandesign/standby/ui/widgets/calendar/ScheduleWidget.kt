@@ -420,7 +420,7 @@ private fun EmptyScheduleView(
 ) {
     val title = when {
         isLocked -> "CALENDAR LOCKED"
-        !hasPermission -> "📅 CONNECT CALENDAR"
+        !hasPermission -> "CONNECT CALENDAR"
         else -> "NO EVENTS TODAY"
     }
 

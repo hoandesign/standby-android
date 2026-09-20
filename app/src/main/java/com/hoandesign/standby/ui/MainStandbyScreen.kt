@@ -36,7 +36,11 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.rounded.CalendarToday
+import androidx.compose.material.icons.rounded.LocationOn
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material3.Icon
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -565,7 +569,7 @@ private fun QuickSettingsModal(
 
                         // Location & Live Weather
                         DataSyncRow(
-                            icon = "📍",
+                            iconVector = Icons.Rounded.LocationOn,
                             title = "Live Weather & GPS",
                             status = if (hasLocation) "Connected" else "Connect",
                             isGranted = hasLocation,
@@ -586,7 +590,7 @@ private fun QuickSettingsModal(
 
                         // Calendar & Agenda
                         DataSyncRow(
-                            icon = "📅",
+                            iconVector = Icons.Rounded.CalendarToday,
                             title = "Calendar Agenda",
                             status = if (hasCalendar) "Connected" else "Connect",
                             isGranted = hasCalendar,
@@ -602,7 +606,7 @@ private fun QuickSettingsModal(
 
                         // Media Session Sync
                         DataSyncRow(
-                            icon = "🎵",
+                            iconVector = Icons.Rounded.MusicNote,
                             title = "Spotify & Media Sync",
                             status = if (hasMedia) "Connected" else "Connect",
                             isGranted = hasMedia,
@@ -826,7 +830,7 @@ private fun QuickSettingsModal(
  */
 @Composable
 private fun DataSyncRow(
-    icon: String,
+    iconVector: ImageVector,
     title: String,
     status: String,
     isGranted: Boolean,
@@ -848,7 +852,12 @@ private fun DataSyncRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(text = icon, fontSize = 16.sp)
+            Icon(
+                imageVector = iconVector,
+                contentDescription = title,
+                tint = if (isGranted) accentColor else TextSecondary,
+                modifier = Modifier.size(18.dp)
+            )
             Text(
                 text = title,
                 fontSize = 13.sp,

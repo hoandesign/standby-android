@@ -151,7 +151,7 @@ class SensorsAndWidgetsTest {
         assertEquals(0, defaultWeather.tempCelsius)
         assertEquals(0, defaultWeather.tempFahrenheit)
         assertEquals("Location Needed", defaultWeather.condition)
-        assertEquals("📍", defaultWeather.iconEmoji)
+        assertEquals("location", defaultWeather.iconEmoji)
         assertEquals(0, defaultWeather.highTemp)
         assertEquals(0, defaultWeather.lowTemp)
         assertEquals(0, defaultWeather.aqi)
@@ -162,7 +162,7 @@ class SensorsAndWidgetsTest {
             tempCelsius = 26,
             tempFahrenheit = 78,
             condition = "Sunny",
-            iconEmoji = "☀️",
+            iconEmoji = "clear",
             highTemp = 85,
             lowTemp = 72,
             aqi = 35,
@@ -182,7 +182,7 @@ class SensorsAndWidgetsTest {
         val state = parseBatteryIntent(null)
         assertEquals(85, state.percentage)
         assertTrue(state.isCharging)
-        assertEquals("⚡ Fast Charging", state.chargeSpeed)
+        assertEquals("Fast Charging", state.chargeSpeed)
         assertEquals(4895, state.capacityMah)
         assertEquals(22, state.timeToFullMinutes)
     }
@@ -198,7 +198,7 @@ class SensorsAndWidgetsTest {
 
         assertEquals(85, state.percentage)
         assertTrue(state.isCharging)
-        assertEquals("⚡ Fast Charging", state.chargeSpeed)
+        assertEquals("Fast Charging", state.chargeSpeed)
         assertEquals(4895, state.capacityMah)
         assertEquals(22, state.timeToFullMinutes)
     }
@@ -214,7 +214,7 @@ class SensorsAndWidgetsTest {
 
         assertEquals(50, state.percentage)
         assertTrue(state.isCharging)
-        assertEquals("⚡ Wireless Qi", state.chargeSpeed)
+        assertEquals("Wireless Qi", state.chargeSpeed)
         // (100 - 50) * 1.47 = 73.5 -> 74 minutes
         assertEquals(74, state.timeToFullMinutes)
     }
@@ -230,7 +230,7 @@ class SensorsAndWidgetsTest {
 
         assertEquals(30, state.percentage)
         assertTrue(state.isCharging)
-        assertEquals("⚡ USB Charging", state.chargeSpeed)
+        assertEquals("USB Charging", state.chargeSpeed)
     }
 
     @Test

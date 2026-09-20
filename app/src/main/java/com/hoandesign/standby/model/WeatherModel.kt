@@ -43,7 +43,7 @@ data class WeatherState(
     val tempCelsius: Int = 0,
     val tempFahrenheit: Int = 0,
     val condition: String = "Location Needed",
-    val iconEmoji: String = "📍",
+    val iconEmoji: String = "location",
     val highTemp: Int = 0,
     val lowTemp: Int = 0,
     val aqi: Int = 0,

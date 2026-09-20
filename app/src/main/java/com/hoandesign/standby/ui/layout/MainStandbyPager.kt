@@ -64,7 +64,6 @@ import com.hoandesign.standby.model.collapseToDual
 import com.hoandesign.standby.model.expandSlot
 import com.hoandesign.standby.model.setScreen
 import com.hoandesign.standby.ui.components.HorizontalPagerIndicator
-import com.hoandesign.standby.ui.components.VerticalPagerIndicator
 import com.hoandesign.standby.ui.theme.StandbyBackground
 import com.hoandesign.standby.ui.theme.StandbyBorderSubtle
 import com.hoandesign.standby.ui.theme.StandbyCardBgSecondary
@@ -233,14 +232,6 @@ fun MainStandbyPager(
         onNavigationStateChange?.invoke(newState)
     }
 
-    // Smoothly shift bento cards down when the navigation menu is visible or in edit mode.
-    // This completely eliminates any visual collision with clock numerals or month titles!
-    val navTopInset by animateDpAsState(
-        targetValue = if ((isNavVisible || isEditMode) && navigationState.displayMode == WidgetDisplayMode.DUAL) 48.dp else 0.dp,
-        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-        label = "navTopInset"
-    )
-
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -305,7 +296,8 @@ fun MainStandbyPager(
                                                 recordInteraction()
                                                 onReorderSlotWidgets(0, from, to)
                                             },
-                                            onUserInteraction = { recordInteraction() }
+                                            onUserInteraction = { recordInteraction() },
+                                            isIndicatorVisible = isNavVisible
                                         )
                                     },
                                     slot2 = {
@@ -334,12 +326,11 @@ fun MainStandbyPager(
                                                 recordInteraction()
                                                 onReorderSlotWidgets(1, from, to)
                                             },
-                                            onUserInteraction = { recordInteraction() }
+                                            onUserInteraction = { recordInteraction() },
+                                            isIndicatorVisible = isNavVisible
                                         )
                                     },
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(top = navTopInset)
+                                    modifier = Modifier.fillMaxSize()
                                 )
                             }
                             WidgetDisplayMode.SINGLE_EXPANDED -> {
@@ -432,14 +423,23 @@ fun MainStandbyPager(
                             )
                         }
 
-                        // Right-aligned vertical dot indicator
-                        if (allSingleWidgets.size > 1) {
-                            VerticalPagerIndicator(
+                        // Top-aligned stack indicator (floating overlay, auto-hiding with navigation)
+                        AnimatedVisibility(
+                            visible = allSingleWidgets.size > 1 && isNavVisible,
+                            enter = fadeIn(),
+                            exit = fadeOut(),
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .padding(top = 58.dp)
+                                .zIndex(10f)
+                        ) {
+                            HorizontalPagerIndicator(
                                 pageCount = allSingleWidgets.size,
                                 currentPage = singleModulePagerState.currentPage,
-                                modifier = Modifier
-                                    .align(Alignment.CenterEnd)
-                                    .padding(end = 14.dp)
+                                indicatorHeight = 4.dp,
+                                activeWidth = 14.dp,
+                                inactiveWidth = 4.dp,
+                                spacing = 4.dp
                             )
                         }
                     }
@@ -528,18 +528,23 @@ fun MainStandbyPager(
             }
         }
 
-        // Sleek iOS-style horizontal page indicator anchored at bottom edge
+        // Sleek iOS-style horizontal page indicator anchored at top edge (floating overlay, auto-hiding with navigation)
         AnimatedVisibility(
             visible = (isNavVisible || isEditMode) && navigationState.displayMode == WidgetDisplayMode.DUAL,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = 12.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 58.dp)
+                .zIndex(15f)
         ) {
             HorizontalPagerIndicator(
                 pageCount = screens.size,
-                currentPage = horizontalPagerState.currentPage
+                currentPage = horizontalPagerState.currentPage,
+                indicatorHeight = 4.dp,
+                activeWidth = 14.dp,
+                inactiveWidth = 4.dp,
+                spacing = 4.dp
             )
         }
     }

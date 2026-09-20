@@ -13,7 +13,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bedtime
+import androidx.compose.material.icons.rounded.WbSunny
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -229,24 +234,47 @@ fun SolarArcClockWidget(
                         .padding(horizontal = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(
-                        text = "🌅 $sunriseText",
-                        style = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp,
-                            color = if (isNightMode) NightRedDim else TextSecondary
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.WbSunny,
+                            contentDescription = "Sunrise",
+                            tint = if (isNightMode) NightRedDim else AccentAmber,
+                            modifier = Modifier.size(12.dp)
                         )
-                    )
-                    Text(
-                        text = "🌇 $sunsetText",
-                        style = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.Medium,
-                            fontSize = 11.sp,
-                            color = if (isNightMode) NightRedDim else TextSecondary
+                        Text(
+                            text = sunriseText,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp,
+                                color = if (isNightMode) NightRedDim else TextSecondary
+                            )
                         )
-                    )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Bedtime,
+                            contentDescription = "Sunset",
+                            tint = if (isNightMode) NightRedDim else TextSecondary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = sunsetText,
+                            style = TextStyle(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 11.sp,
+                                color = if (isNightMode) NightRedDim else TextSecondary
+                            )
+                        )
+                    }
                 }
             }
 

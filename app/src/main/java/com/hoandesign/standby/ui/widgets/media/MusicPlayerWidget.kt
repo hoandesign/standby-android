@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -185,16 +186,27 @@ fun MusicPlayerWidget(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "🎵 CONNECT MEDIA SYNC",
-                        style = TextStyle(
-                            fontFamily = FontFamily.Default,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 11.sp,
-                            letterSpacing = 0.08.em,
-                            color = if (isNightMode) NightRed else AccentOrange
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.MusicNote,
+                            contentDescription = null,
+                            tint = if (isNightMode) NightRed else AccentOrange,
+                            modifier = Modifier.size(16.dp)
                         )
-                    )
+                        Text(
+                            text = "CONNECT MEDIA SYNC",
+                            style = TextStyle(
+                                fontFamily = FontFamily.Default,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                letterSpacing = 0.08.em,
+                                color = if (isNightMode) NightRed else AccentOrange
+                            )
+                        )
+                    }
                     Text(
                         text = "Tap to grant permission for Spotify & YouTube Music",
                         style = TextStyle(
@@ -811,15 +823,11 @@ private fun AlbumArtCover(
                 contentScale = ContentScale.Crop
             )
         } else {
-            Text(
-                text = "♪",
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 11.sp,
-                    letterSpacing = 0.1.em,
-                    color = if (isNightMode) Color(0xCCFF453A) else Color(0xDDFFFFFF)
-                )
+            Icon(
+                imageVector = Icons.Rounded.MusicNote,
+                contentDescription = null,
+                tint = if (isNightMode) Color(0xCCFF453A) else Color(0xDDFFFFFF),
+                modifier = Modifier.size(14.dp)
             )
         }
     }

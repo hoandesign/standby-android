@@ -19,9 +19,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Bluetooth
+import androidx.compose.material.icons.rounded.BrightnessHigh
+import androidx.compose.material.icons.rounded.BrightnessLow
+import androidx.compose.material.icons.rounded.SignalCellularAlt
+import androidx.compose.material.icons.rounded.Wifi
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -117,7 +125,7 @@ fun SystemBentoWidget(
             ) {
                 // Wi-Fi Pill
                 ConnectivityPill(
-                    icon = "📶",
+                    iconVector = Icons.Rounded.Wifi,
                     label = if (connectivity.isWifiActive) "Wi-Fi" else "Off",
                     isActive = connectivity.isWifiActive,
                     accentColor = if (isNightMode) NightRed else AccentCyan,
@@ -130,7 +138,7 @@ fun SystemBentoWidget(
 
                 // Bluetooth Pill
                 ConnectivityPill(
-                    icon = "ᛒ",
+                    iconVector = Icons.Rounded.Bluetooth,
                     label = if (connectivity.isBluetoothActive) "BT" else "Off",
                     isActive = connectivity.isBluetoothActive,
                     accentColor = if (isNightMode) NightRed else AccentBlue,
@@ -143,8 +151,8 @@ fun SystemBentoWidget(
 
                 // Cell Pill
                 ConnectivityPill(
-                    icon = if (connectivity.isCellularActive) "5G" else "Cell",
-                    label = if (connectivity.isCellularActive) "Active" else "Standby",
+                    iconVector = Icons.Rounded.SignalCellularAlt,
+                    label = if (connectivity.isCellularActive) "Cell" else "Off",
                     isActive = connectivity.isCellularActive || connectivity.isConnected,
                     accentColor = if (isNightMode) NightRed else AccentGreen,
                     isNightMode = isNightMode,
@@ -282,9 +290,11 @@ fun SystemBentoWidget(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = "🔆",
-                    fontSize = 12.sp
+                Icon(
+                    imageVector = Icons.Rounded.BrightnessLow,
+                    contentDescription = "Brightness Low",
+                    tint = if (isNightMode) NightRedDim else TextTertiary,
+                    modifier = Modifier.size(16.dp)
                 )
 
                 Slider(
@@ -306,9 +316,11 @@ fun SystemBentoWidget(
                     )
                 )
 
-                Text(
-                    text = "☀️",
-                    fontSize = 14.sp
+                Icon(
+                    imageVector = Icons.Rounded.BrightnessHigh,
+                    contentDescription = "Brightness High",
+                    tint = if (isNightMode) NightRed else activeAccent,
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -320,7 +332,7 @@ fun SystemBentoWidget(
  */
 @Composable
 private fun ConnectivityPill(
-    icon: String,
+    iconVector: ImageVector,
     label: String,
     isActive: Boolean,
     accentColor: Color,
@@ -350,11 +362,11 @@ private fun ConnectivityPill(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
     ) {
-        Text(
-            text = icon,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = if (isActive) (if (isNightMode) NightRed else accentColor) else TextTertiary
+        Icon(
+            imageVector = iconVector,
+            contentDescription = label,
+            tint = if (isActive) (if (isNightMode) NightRed else accentColor) else TextTertiary,
+            modifier = Modifier.size(13.dp)
         )
         Spacer(modifier = Modifier.width(4.dp))
         Text(

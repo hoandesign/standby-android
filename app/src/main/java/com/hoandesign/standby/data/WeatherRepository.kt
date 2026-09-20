@@ -26,7 +26,7 @@ class WeatherRepository {
             tempCelsius = 0,
             tempFahrenheit = 0,
             condition = "Location Needed",
-            iconEmoji = "📍",
+            iconEmoji = "location",
             highTemp = 0,
             lowTemp = 0,
             aqi = 0,
@@ -120,13 +120,13 @@ class WeatherRepository {
                             val hourPart = timeStr.substringAfter("T", "").take(5)
                             val tC = temps?.optDouble(i, 20.0)?.roundToInt() ?: 20
                             val cWmo = codes?.optInt(i, 1) ?: 1
-                            val (_, cEmoji) = mapWmoCodeToCondition(cWmo)
+                            val (cCond, _) = mapWmoCodeToCondition(cWmo)
                             hourlyList.add(
                                 com.hoandesign.standby.model.HourlyForecast(
                                     timeLabel = if (hourPart.isNotBlank()) hourPart else "${i}:00",
                                     tempCelsius = tC,
                                     tempFahrenheit = celsiusToFahrenheit(tC),
-                                    conditionEmoji = cEmoji
+                                    conditionEmoji = cCond
                                 )
                             )
                         }
@@ -147,7 +147,7 @@ class WeatherRepository {
                             val dayHighC = highMaxArray?.optDouble(d, (tempC + 4).toDouble())?.roundToInt() ?: (tempC + 4)
                             val dayLowC = lowMinArray?.optDouble(d, (tempC - 4).toDouble())?.roundToInt() ?: (tempC - 4)
                             val dayWmo = dailyCodeArray?.optInt(d, 1) ?: 1
-                            val (_, dayEmoji) = mapWmoCodeToCondition(dayWmo)
+                            val (dayCond, _) = mapWmoCodeToCondition(dayWmo)
 
                             dailyList.add(
                                 com.hoandesign.standby.model.DailyForecast(
@@ -156,7 +156,7 @@ class WeatherRepository {
                                     lowTempCelsius = dayLowC,
                                     highTempFahrenheit = celsiusToFahrenheit(dayHighC),
                                     lowTempFahrenheit = celsiusToFahrenheit(dayLowC),
-                                    conditionEmoji = dayEmoji
+                                    conditionEmoji = dayCond
                                 )
                             )
                         }

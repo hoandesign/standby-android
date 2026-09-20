@@ -74,6 +74,19 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
    * Bundled official **Inter variable font** with negative tracking (`-0.05.em` for hero numerals).
    * Pitch-black OLED backgrounds (`#000000`), subtle glassmorphic translucent surfaces (`0xEE121215`), and hairline borders (`0x28FFFFFF`).
 
+8. **Zero-Emoji Mandate (Architectural Vector Standard):**
+   * Raw cartoon emojis (e.g. ⚡, 📶, ᛒ, ☀️, 🌧️, 🔥, 🍃, ⏰, 📍, 🎵, ⛅, 💧) are strictly PROHIBITED across both UI views and data layers.
+   * All iconography must be rendered via custom Canvas-drawn vector paths (`DrawScope`), Compose Vector Graphics (`Icons.Default.*`), or clean typographic badges.
+
+9. **Independent Navigation & Auto-Hiding Indicator Overlays:**
+   * Top navigation bar (`StandbyTopNavigationMenu.kt`) and all swipe indicators (horizontal screen indicator and vertical widget stack indicators) MUST be floating Z-axis overlays with ZERO layout padding or push on the underlying content (`navTopInset = 0.dp`).
+   * When idle, indicators and navigation auto-hide completely after 4.5 seconds so 100% of the screen width and height is utilized by the widgets on pure OLED black.
+   * Touching the screen or swiping brings back the floating overlays without causing layout shifts or squeezing.
+
+10. **Authentic Apple StandBy Squircle Geometry & Minimalist Weather Hierarchy:**
+    * Clock dials and bento widgets must adopt true continuous-curvature squircle geometry (superellipse / Lamé curve `(x/a)^4 + (y/b)^4 = 1`), dense perimeter ticks, 12 inward radial index rays, bold cardinal numerals (`12, 3, 6, 9`), clean baton hands, and hollow-center orange ring hub.
+    * Weather displays must follow Apple StandBy's clean left-aligned vertical stack: City Name (Title Case) -> Monumental Temperature (100sp) -> Vector Weather Icon + Condition ("Sunny") + Daily Range ("H:91° L:62°"), borderless on pure pitch-black OLED.
+
 ---
 
 ## 2. The 6-Step Autonomous "Do-Loop"

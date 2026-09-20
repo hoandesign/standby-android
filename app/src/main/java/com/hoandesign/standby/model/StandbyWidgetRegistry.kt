@@ -234,7 +234,7 @@ fun FullscreenWeather(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text(
-                        text = "📍 LIVE WEATHER ACCESS",
+                        text = "LIVE WEATHER ACCESS",
                         color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.AccentOrange,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,

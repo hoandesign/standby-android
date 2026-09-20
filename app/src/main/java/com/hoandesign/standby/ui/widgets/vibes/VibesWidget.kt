@@ -52,6 +52,10 @@ import com.hoandesign.standby.ui.theme.NightRed
 import com.hoandesign.standby.ui.theme.NightRedDim
 import com.hoandesign.standby.ui.theme.OledBlack
 import com.hoandesign.standby.ui.theme.StandbyBorder
+import androidx.compose.material.icons.rounded.Air
+import androidx.compose.material.icons.rounded.LocalFireDepartment
+import androidx.compose.material.icons.rounded.WaterDrop
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.hoandesign.standby.ui.theme.StandbyCardBgSecondary
 import com.hoandesign.standby.ui.theme.StandbyTheme
 import com.hoandesign.standby.ui.theme.TextPrimary
@@ -61,12 +65,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 /**
- * Available bedside ambient relaxation soundscapes.
+ * Available bedside ambient relaxation soundscapes using Google Material Design Icons.
  */
-enum class Soundscape(val title: String, val emoji: String) {
-    RAIN("Rain", "🌧️"),
-    CAMPFIRE("Campfire", "🔥"),
-    WIND("Wind", "🍃")
+enum class Soundscape(val title: String, val icon: ImageVector) {
+    RAIN("Rain", Icons.Rounded.WaterDrop),
+    CAMPFIRE("Campfire", Icons.Rounded.LocalFireDepartment),
+    WIND("Wind", Icons.Rounded.Air)
 }
 
 /**
@@ -214,7 +218,12 @@ fun VibesWidget(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(3.dp)
                         ) {
-                            Text(text = scape.emoji, fontSize = 10.sp)
+                            Icon(
+                                imageVector = scape.icon,
+                                contentDescription = scape.title,
+                                tint = if (isSelected) (if (isNightMode) NightRed else activeAccent) else TextTertiary,
+                                modifier = Modifier.size(11.dp)
+                            )
                             Text(
                                 text = scape.title,
                                 style = TextStyle(

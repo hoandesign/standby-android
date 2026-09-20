@@ -15,6 +15,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Alarm
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -292,9 +295,11 @@ private fun AlarmIndicatorChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
-            VectorAlarmIcon(
-                size = iconSizeDp,
-                tint = contentColor
+            Icon(
+                imageVector = Icons.Rounded.Alarm,
+                contentDescription = "Alarm",
+                tint = contentColor,
+                modifier = Modifier.size(iconSizeDp)
             )
             Text(
                 text = alarmText,

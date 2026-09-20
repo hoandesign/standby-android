@@ -195,9 +195,9 @@ object SystemTelemetryHelper {
 
             val speed = when {
                 !isCharging -> "On Battery"
-                plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "⚡ Wireless Qi"
-                plugged == BatteryManager.BATTERY_PLUGGED_USB -> "⚡ USB Charging"
-                else -> "⚡ Fast Charging"
+                plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless Qi"
+                plugged == BatteryManager.BATTERY_PLUGGED_USB -> "USB Charging"
+                else -> "Fast Charging"
             }
 
             BatteryTelemetry(

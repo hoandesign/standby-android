@@ -1,5 +1,8 @@
 package com.hoandesign.standby.ui.layout
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,9 +15,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.hoandesign.standby.model.StandbyWidgetId
 import com.hoandesign.standby.model.StandbyWidgetRegistry
-import com.hoandesign.standby.ui.components.VerticalPagerIndicator
+import com.hoandesign.standby.ui.components.HorizontalPagerIndicator
 
 /**
  * Dynamic Bento slot card with vertical pagination across configured widgets,
@@ -33,6 +37,7 @@ fun DynamicSlotCard(
     onToggleExpand: () -> Unit,
     onReorderWidgets: ((Int, Int) -> Unit)? = null,
     onUserInteraction: () -> Unit = {},
+    isIndicatorVisible: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -84,13 +89,24 @@ fun DynamicSlotCard(
             }
         }
 
-        if (widgetIds.size > 1 && !isEditMode) {
-            VerticalPagerIndicator(
+        // Top-aligned slot stack indicator (floating overlay, auto-hiding with navigation)
+        AnimatedVisibility(
+            visible = widgetIds.size > 1 && !isEditMode && isIndicatorVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .padding(top = 10.dp)
+                .zIndex(10f)
+        ) {
+            HorizontalPagerIndicator(
                 pageCount = widgetIds.size,
                 currentPage = pagerState.currentPage.coerceIn(0, widgetIds.size - 1),
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp)
+                indicatorHeight = 4.dp,
+                activeWidth = 12.dp,
+                inactiveWidth = 4.dp,
+                spacing = 4.dp,
+                inactiveColor = Color.White.copy(alpha = 0.25f)
             )
         }
     }

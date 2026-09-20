@@ -12,7 +12,7 @@ package com.hoandesign.standby.model
 data class BatteryState(
     val percentage: Int = 85,
     val isCharging: Boolean = true,
-    val chargeSpeed: String = "⚡ Fast Charging",
+    val chargeSpeed: String = "Fast Charging",
     val capacityMah: Int = 4895,
     val timeToFullMinutes: Int? = 22
 )

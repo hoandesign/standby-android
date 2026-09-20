@@ -52,10 +52,10 @@ fun calculateBatteryState(
 
     val chargeSpeed = when {
         !isCharging -> "On Battery"
-        plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "⚡ Wireless Qi"
-        plugged == BatteryManager.BATTERY_PLUGGED_USB -> "⚡ USB Charging"
-        plugged == BatteryManager.BATTERY_PLUGGED_AC -> "⚡ Fast Charging"
-        else -> "⚡ Fast Charging"
+        plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS -> "Wireless Qi"
+        plugged == BatteryManager.BATTERY_PLUGGED_USB -> "USB Charging"
+        plugged == BatteryManager.BATTERY_PLUGGED_AC -> "Fast Charging"
+        else -> "Fast Charging"
     }
 
     val timeToFullMinutes = if (isCharging) {
