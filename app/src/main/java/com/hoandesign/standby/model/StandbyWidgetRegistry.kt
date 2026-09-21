@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -260,23 +261,30 @@ fun FullscreenWeather(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        val displayPortraitCity = if (!weather.isLive || weather.cityName == "Location Needed") com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CITY else weather.cityName
+                        val displayPortraitCondition = if (!weather.isLive || weather.condition == "Location Needed") com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CONDITION else weather.condition
+
+                        Column(modifier = Modifier.weight(1f, fill = false)) {
                             Text(
-                                text = weather.cityName.uppercase(),
+                                text = displayPortraitCity.uppercase(),
                                 color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 0.08.em
+                                letterSpacing = 0.08.em,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = weather.condition,
+                                text = displayPortraitCondition,
                                 color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                         com.hoandesign.standby.ui.components.WeatherVectorIcon(
-                            condition = weather.condition,
+                            condition = displayPortraitCondition,
                             size = 40.dp,
                             isNightMode = isNightMode
                         )
@@ -287,9 +295,22 @@ fun FullscreenWeather(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.Bottom
                     ) {
-                        val displayTemp = if (isCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"
-                        val highDisplay = if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
-                        val lowDisplay = if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
+                        val hasLiveHighLow = weather.isLive
+                        val displayTemp = if (!hasLiveHighLow) {
+                            if (isCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_F}°"
+                        } else {
+                            if (isCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"
+                        }
+                        val highDisplay = if (!hasLiveHighLow) {
+                            if (isCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_HIGH_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_HIGH_F}°"
+                        } else {
+                            if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
+                        }
+                        val lowDisplay = if (!hasLiveHighLow) {
+                            if (isCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_LOW_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_LOW_F}°"
+                        } else {
+                            if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
+                        }
 
                         Text(
                             text = displayTemp,
@@ -303,7 +324,9 @@ fun FullscreenWeather(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                             color = if (isNightMode) Color(0xAAFF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                            modifier = Modifier.padding(bottom = 12.dp),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -390,18 +413,27 @@ fun FullscreenWeather(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val displayLandscapeCity = if (!weather.isLive || weather.cityName == "Location Needed") com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CITY else weather.cityName
+                    val displayLandscapeCondition = if (!weather.isLive || weather.condition == "Location Needed") com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CONDITION else weather.condition
+
                     Text(
-                        text = if (weather.cityName == "Location Needed") "LOCAL WEATHER" else weather.cityName.uppercase(),
+                        text = displayLandscapeCity.uppercase(),
                         color = if (isNightMode) com.hoandesign.standby.ui.theme.NightRed else com.hoandesign.standby.ui.theme.TextTertiary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.08.em
+                        letterSpacing = 0.08.em,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        val currentTempDisplay = if (weather.cityName == "Location Needed") "--°" else (if (isCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°")
+                        val currentTempDisplay = if (!weather.isLive) {
+                            if (isCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_F}°"
+                        } else {
+                            if (isCelsius) "${weather.tempCelsius}°" else "${weather.tempFahrenheit}°"
+                        }
                         Text(
                             text = currentTempDisplay,
                             fontSize = 80.sp,
@@ -410,18 +442,28 @@ fun FullscreenWeather(
                             letterSpacing = (-0.03).em
                         )
                         com.hoandesign.standby.ui.components.WeatherVectorIcon(
-                            condition = if (weather.cityName == "Location Needed") "Partly Cloudy" else weather.condition,
+                            condition = displayLandscapeCondition,
                             size = 54.dp,
                             isNightMode = isNightMode
                         )
                     }
-                    val lHigh = if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
-                    val lLow = if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
+                    val lHigh = if (!weather.isLive) {
+                        if (isCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_HIGH_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_HIGH_F}°"
+                    } else {
+                        if (isCelsius) "${((weather.highTemp - 32) * 5 / 9)}°" else "${weather.highTemp}°"
+                    }
+                    val lLow = if (!weather.isLive) {
+                        if (isCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_LOW_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_LOW_F}°"
+                    } else {
+                        if (isCelsius) "${((weather.lowTemp - 32) * 5 / 9)}°" else "${weather.lowTemp}°"
+                    }
                     Text(
-                        text = if (weather.condition == "Location Needed") "Tap to refresh" else "${weather.condition}  ·  H: $lHigh  L: $lLow",
+                        text = "$displayLandscapeCondition  ·  H: $lHigh  L: $lLow",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary
+                        color = if (isNightMode) Color(0xCCFF453A) else com.hoandesign.standby.ui.theme.TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 

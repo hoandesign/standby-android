@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.sp
 import com.hoandesign.standby.data.CalendarRepository
 import com.hoandesign.standby.model.CalendarEvent
 import com.hoandesign.standby.model.formatEventCountdown
+import com.hoandesign.standby.util.SystemIntents
 import com.hoandesign.standby.ui.theme.NightRed
 import com.hoandesign.standby.ui.theme.NightRedDim
 import com.hoandesign.standby.ui.theme.OledBlack
@@ -115,6 +116,9 @@ fun ScheduleWidget(
                 hasPermission = hasPermission,
                 onRequestPermission = {
                     calendarLauncher.launch(Manifest.permission.READ_CALENDAR)
+                },
+                onOpenCalendar = {
+                    SystemIntents.launchSystemCalendar(context)
                 }
             )
         } else {
@@ -130,7 +134,13 @@ fun ScheduleWidget(
                     event = nextEvent,
                     currentEpoch = currentEpoch,
                     isNightMode = isNightMode,
-                    onClick = { onEventClick?.invoke(nextEvent) }
+                    onClick = {
+                        if (onEventClick != null) {
+                            onEventClick(nextEvent)
+                        } else {
+                            SystemIntents.launchCalendarEvent(context, nextEvent.id)
+                        }
+                    }
                 )
 
                 // Timeline List of Upcoming Events
@@ -145,7 +155,13 @@ fun ScheduleWidget(
                             TimelineEventRow(
                                 event = event,
                                 isNightMode = isNightMode,
-                                onClick = { onEventClick?.invoke(event) }
+                                onClick = {
+                                    if (onEventClick != null) {
+                                        onEventClick(event)
+                                    } else {
+                                        SystemIntents.launchCalendarEvent(context, event.id)
+                                    }
+                                }
                             )
                         }
                     }
@@ -416,7 +432,8 @@ private fun EmptyScheduleView(
     isNightMode: Boolean,
     isLocked: Boolean,
     hasPermission: Boolean,
-    onRequestPermission: () -> Unit = {}
+    onRequestPermission: () -> Unit = {},
+    onOpenCalendar: () -> Unit = {}
 ) {
     val title = when {
         isLocked -> "CALENDAR LOCKED"
@@ -427,13 +444,19 @@ private fun EmptyScheduleView(
     val subtitle = when {
         isLocked -> "Unlock device to sync calendar"
         !hasPermission -> "Tap to grant calendar access"
-        else -> "Your schedule is clear"
+        else -> "Your schedule is clear · Tap to open"
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(enabled = !hasPermission && !isLocked) { onRequestPermission() },
+            .clickable(enabled = !isLocked) {
+                if (!hasPermission) {
+                    onRequestPermission()
+                } else {
+                    onOpenCalendar()
+                }
+            },
         contentAlignment = Alignment.Center
     ) {
         Column(

@@ -16,7 +16,7 @@ enum class TemperatureUnit(val symbol: String, val label: String) {
  * @param tempCelsius Current temperature in degrees Celsius.
  * @param tempFahrenheit Current temperature in degrees Fahrenheit.
  * @param condition Descriptive weather condition (e.g. "Partly Cloudy", "Clear Sky").
- * @param iconEmoji Visual emoji representation for the condition (e.g. "⛅", "☀️").
+ * @param iconEmoji Semantic key representation for the condition (e.g. "partly_cloudy", "clear_sky").
  * @param highTemp Day's forecasted high temperature.
  * @param lowTemp Day's forecasted low temperature.
  * @param aqi Air Quality Index reading (e.g. 28).
@@ -96,25 +96,25 @@ fun fahrenheitToCelsius(fahrenheit: Int): Int {
  */
 fun mapWmoCodeToCondition(wmoCode: Int): Pair<String, String> {
     return when (wmoCode) {
-        0 -> Pair("Clear Sky", "☀️")
-        1 -> Pair("Mainly Clear", "🌤️")
-        2 -> Pair("Partly Cloudy", "⛅")
-        3 -> Pair("Overcast", "☁️")
-        45, 48 -> Pair("Foggy", "🌫️")
-        51, 53, 55 -> Pair("Drizzle", "🌦️")
-        56, 57 -> Pair("Freezing Drizzle", "🌧️")
-        61 -> Pair("Light Rain", "🌧️")
-        63 -> Pair("Moderate Rain", "🌧️")
-        65 -> Pair("Heavy Rain", "🌧️")
-        66, 67 -> Pair("Freezing Rain", "🌧️")
-        71 -> Pair("Light Snow", "🌨️")
-        73 -> Pair("Moderate Snow", "🌨️")
-        75 -> Pair("Heavy Snow", "🌨️")
-        77 -> Pair("Snow Grains", "🌨️")
-        80, 81, 82 -> Pair("Rain Showers", "🌦️")
-        85, 86 -> Pair("Snow Showers", "🌨️")
-        95 -> Pair("Thunderstorm", "⛈️")
-        96, 99 -> Pair("Thunderstorm with Hail", "⛈️")
-        else -> Pair("Clear Sky", "☀️")
+        0 -> Pair("Clear Sky", "clear_sky")
+        1 -> Pair("Mainly Clear", "mainly_clear")
+        2 -> Pair("Partly Cloudy", "partly_cloudy")
+        3 -> Pair("Overcast", "overcast")
+        45, 48 -> Pair("Foggy", "fog")
+        51, 53, 55 -> Pair("Drizzle", "drizzle")
+        56, 57 -> Pair("Freezing Drizzle", "freezing_drizzle")
+        61 -> Pair("Light Rain", "rain_light")
+        63 -> Pair("Moderate Rain", "rain_moderate")
+        65 -> Pair("Heavy Rain", "rain_heavy")
+        66, 67 -> Pair("Freezing Rain", "freezing_rain")
+        71 -> Pair("Light Snow", "snow_light")
+        73 -> Pair("Moderate Snow", "snow_moderate")
+        75 -> Pair("Heavy Snow", "snow_heavy")
+        77 -> Pair("Snow Grains", "snow_grains")
+        80, 81, 82 -> Pair("Rain Showers", "rain_showers")
+        85, 86 -> Pair("Snow Showers", "snow_showers")
+        95 -> Pair("Thunderstorm", "thunderstorm")
+        96, 99 -> Pair("Thunderstorm with Hail", "thunderstorm_hail")
+        else -> Pair("Clear Sky", "clear_sky")
     }
 }

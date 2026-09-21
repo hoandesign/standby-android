@@ -78,7 +78,7 @@ enum class Soundscape(val title: String, val icon: ImageVector) {
  * and sleep timer selector.
  *
  * Features:
- * - Ambient soundscapes: Gentle Rain 🌧️, Warm Campfire 🔥, Night Wind 🍃.
+ * - Ambient soundscapes: Gentle Rain, Warm Campfire, Night Wind.
  * - Multi-bar animated soundwave visualizer that bounces dynamically when playing.
  * - Sleep timer presets: Off, 15m, 30m, 60m with live countdown ticking.
  * - Play/Pause audio control toggle.

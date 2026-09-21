@@ -2,13 +2,22 @@ package com.hoandesign.standby.ui.widgets.clock
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import com.hoandesign.standby.util.SystemIntents
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -97,6 +106,7 @@ fun RadialClockWidget(
     val secondHandColor = if (isNightMode) NightRedTint else accentColor
     val dateAccentColor = if (isNightMode) NightRed else Color(0xFFC45B3E)
     val dateTextColor = if (isNightMode) NightRed else Color.White
+    val context = LocalContext.current
 
     BoxWithConstraints(
         modifier = modifier
@@ -363,6 +373,29 @@ fun RadialClockWidget(
                 color = dialBackgroundColor,
                 radius = hubRadius * 0.45f,
                 center = center
+            )
+        }
+
+        // Discrete complication touch targets (no gesture interception on the rest of the dial)
+        if (alarmText.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = -maxWidth * 0.22f)
+                    .size(width = (maxWidth * 0.28f).coerceIn(40.dp, 120.dp), height = 36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { SystemIntents.launchAlarmClock(context) }
+            )
+        }
+
+        if (dateText.isNotBlank()) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .offset(x = maxWidth * 0.22f)
+                    .size(width = (maxWidth * 0.28f).coerceIn(40.dp, 120.dp), height = 36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable { SystemIntents.launchSystemCalendar(context) }
             )
         }
     }

@@ -38,10 +38,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import com.hoandesign.standby.util.SystemIntents
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -139,6 +141,8 @@ fun DeskTimerWidget(
         String.format(Locale.US, "%02d:%02d", minutes, seconds)
     }
 
+    val context = LocalContext.current
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
@@ -178,8 +182,9 @@ fun DeskTimerWidget(
                         else -> StandbyBorder
                     }
                     val chipTextColor = when {
+                        isSelected && isNightMode -> NightRed
                         isSelected -> activeAccent
-                        isNightMode -> Color(0x88FF453A)
+                        isNightMode -> Color(0xAAFF453A)
                         else -> TextSecondary
                     }
 
@@ -189,11 +194,7 @@ fun DeskTimerWidget(
                             .background(chipBg)
                             .border(1.dp, chipBorder, RoundedCornerShape(12.dp))
                             .clickable {
-                                try {
-                                    haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
-                                } catch (_: Throwable) {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                }
+                                haptic.performHapticFeedback(HapticFeedbackType.SegmentTick)
                                 selectedPreset = preset
                                 totalSeconds = preset.durationSeconds
                                 remainingSeconds = preset.durationSeconds
@@ -217,7 +218,10 @@ fun DeskTimerWidget(
 
             // Circular Animated Progress Ring
             Box(
-                modifier = Modifier.size(ringSize),
+                modifier = Modifier
+                    .size(ringSize)
+                    .clip(CircleShape)
+                    .clickable { SystemIntents.launchTimer(context) },
                 contentAlignment = Alignment.Center
             ) {
                 val trackColor = if (isNightMode) NightRedDim else Color(0xFF232326)

@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,6 +51,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.hoandesign.standby.data.BatteryMonitor
 import com.hoandesign.standby.model.BatteryState
+import com.hoandesign.standby.util.SystemIntents
 import com.hoandesign.standby.ui.theme.AccentGreen
 import com.hoandesign.standby.ui.theme.NightRed
 import com.hoandesign.standby.ui.theme.NightRedDim
@@ -67,7 +69,7 @@ import kotlin.math.min
  * Features:
  * - Iconic Apple StandBy circular arc gauge with rounded stroke cap.
  * - Central bold percentage with glowing lightning bolt indicator.
- * - Dynamic charging status pill ("⚡ Fast Charging", "⚡ Qi Wireless", or "On Battery").
+ * - Dynamic charging status pill ("Fast Charging", "Qi Wireless", or "On Battery").
  * - Sub-info row with device name, battery capacity (e.g. 4700 mAh), and time to full.
  * - Seamless OLED Night Mode adaptation.
  *
@@ -132,9 +134,12 @@ private fun CompactCircularBatteryWidget(
     pulseAlpha: Float,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
+            .clip(RoundedCornerShape(24.dp))
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         val availableHeight = maxHeight
@@ -177,6 +182,7 @@ private fun CompactCircularBatteryWidget(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
+                        .clickable { SystemIntents.launchBatterySettings(context) }
                         .background(pillBg)
                         .border(1.dp, pillBorder, RoundedCornerShape(10.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp),
@@ -199,7 +205,9 @@ private fun CompactCircularBatteryWidget(
 
             Box(
                 modifier = Modifier
-                    .size(ringDiameter),
+                    .size(ringDiameter)
+                    .clip(CircleShape)
+                    .clickable { SystemIntents.launchBatterySettings(context) },
                 contentAlignment = Alignment.Center
             ) {
                 val fraction = (batteryState.percentage / 100f).coerceIn(0f, 1f)
@@ -312,9 +320,12 @@ private fun FullscreenBatteryDashboard(
     pulseAlpha: Float,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
+            .clip(RoundedCornerShape(28.dp))
             .padding(20.dp),
         contentAlignment = Alignment.Center
     ) {
@@ -325,7 +336,10 @@ private fun FullscreenBatteryDashboard(
         @Composable
         fun BatteryRingContent() {
             Box(
-                modifier = Modifier.size(ringSize),
+                modifier = Modifier
+                    .size(ringSize)
+                    .clip(CircleShape)
+                    .clickable { SystemIntents.launchBatterySettings(context) },
                 contentAlignment = Alignment.Center
             ) {
                 val fraction = (batteryState.percentage / 100f).coerceIn(0f, 1f)
@@ -415,6 +429,7 @@ private fun FullscreenBatteryDashboard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
+                        .clickable { SystemIntents.launchBatterySettings(context) }
                         .background(StandbyCardBgSecondary)
                         .border(1.dp, StandbyBorder, RoundedCornerShape(16.dp))
                         .padding(14.dp)

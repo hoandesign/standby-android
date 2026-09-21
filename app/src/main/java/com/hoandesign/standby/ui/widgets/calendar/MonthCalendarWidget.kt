@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -21,6 +22,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import com.hoandesign.standby.util.SystemIntents
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +59,7 @@ fun MonthCalendarWidget(
 ) {
     val month = calendarMonth ?: remember { CalendarMonth.now() }
     val isNightMode = StandbyTheme.isNightMode
+    val context = LocalContext.current
 
     // Day of week single-character headers starting on Sunday
     val daysOfWeek = remember { listOf("S", "M", "T", "W", "T", "F", "S") }
@@ -89,7 +93,10 @@ fun MonthCalendarWidget(
                     letterSpacing = 0.05.em,
                     color = NightRed
                 ),
-                modifier = Modifier.padding(start = 2.dp, bottom = 4.dp)
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { SystemIntents.launchSystemCalendar(context) }
+                    .padding(start = 2.dp, bottom = 4.dp)
             )
 
             // Day of Week Header Row: S  M  T  W  T  F  S
@@ -142,10 +149,20 @@ fun MonthCalendarWidget(
                             ) {
                                 if (dayNumber != null) {
                                     val isToday = dayNumber == month.todayDayOfMonth
-                                    val clickableModifier = if (onDateClick != null) {
-                                        Modifier.clickable { onDateClick(dayNumber) }
-                                    } else {
-                                        Modifier
+                                    val clickableModifier = Modifier.clickable {
+                                        if (onDateClick != null) {
+                                            onDateClick(dayNumber)
+                                        } else {
+                                            val cal = java.util.Calendar.getInstance().apply {
+                                                set(java.util.Calendar.YEAR, month.year)
+                                                set(java.util.Calendar.MONTH, month.month - 1)
+                                                set(java.util.Calendar.DAY_OF_MONTH, dayNumber)
+                                                set(java.util.Calendar.HOUR_OF_DAY, 9)
+                                                set(java.util.Calendar.MINUTE, 0)
+                                                set(java.util.Calendar.SECOND, 0)
+                                            }
+                                            SystemIntents.launchSystemCalendar(context, cal.timeInMillis)
+                                        }
                                     }
 
                                     if (isToday) {

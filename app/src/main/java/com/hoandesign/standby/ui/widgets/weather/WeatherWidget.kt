@@ -12,11 +12,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -47,6 +50,7 @@ import com.hoandesign.standby.ui.theme.StandbyTheme
 import com.hoandesign.standby.ui.theme.TextPrimary
 import com.hoandesign.standby.ui.theme.TextSecondary
 import com.hoandesign.standby.util.PermissionHelper
+import com.hoandesign.standby.util.SystemIntents
 import kotlinx.coroutines.launch
 
 /**
@@ -123,27 +127,28 @@ fun WeatherWidget(
     val tempPreference = StandbyTheme.temperatureUnit
     val showCelsius = tempPreference == com.hoandesign.standby.model.TemperatureUnit.CELSIUS
     val isNightMode = StandbyTheme.isNightMode
+    val displayCity = if (!hasLocationPerm) "Location Access" else if (!weather.isLive) com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CITY else weather.cityName
 
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
             .background(OledBlack)
-            .clickable {
-                if (!hasLocationPerm) {
-                    locationLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                    )
-                } else {
-                    val nextUnit = if (showCelsius) com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS
-                    prefs.edit().putString("pref_temp_unit", if (nextUnit == com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT) "F" else "C").apply()
-                }
-            }
             .padding(horizontal = 20.dp, vertical = 12.dp),
         contentAlignment = Alignment.CenterStart
     ) {
+        val onWeatherClick: () -> Unit = {
+            if (!hasLocationPerm) {
+                locationLauncher.launch(
+                    arrayOf(
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    )
+                )
+            } else {
+                SystemIntents.launchWeather(context, displayCity, currentLat, currentLon)
+            }
+        }
+
         val h = maxHeight
         val cityFontSize = if (h < 150.dp) 18.sp else 26.sp
         val tempFontSize = if (h < 150.dp) 56.sp else 88.sp
@@ -162,7 +167,6 @@ fun WeatherWidget(
             if (showCelsius) ((weather.lowTemp - 32) * 5 / 9).toString() else weather.lowTemp.toString()
         }
 
-        val displayCity = if (!hasLocationPerm) "Location Access" else if (!weather.isLive) com.hoandesign.standby.model.WeatherDefaults.DEFAULT_CITY else weather.cityName
         val displayTemp = if (!hasLocationPerm || !weather.isLive) {
             if (showCelsius) "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_C}°" else "${com.hoandesign.standby.model.WeatherDefaults.DEFAULT_TEMP_F}°"
         } else {
@@ -186,7 +190,10 @@ fun WeatherWidget(
                     fontSize = cityFontSize,
                     letterSpacing = (-0.02).em,
                     color = if (isNightMode) NightRed else TextPrimary
-                )
+                ),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(onClick = onWeatherClick)
             )
 
             // 2. Monumental Hero Temperature
@@ -205,33 +212,43 @@ fun WeatherWidget(
                         fontSize = tempFontSize,
                         letterSpacing = (-0.04).em,
                         color = if (isNightMode) NightRed else TextPrimary
-                    )
+                    ),
+                    modifier = Modifier.clickable {
+                        val nextUnit = if (showCelsius) com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT else com.hoandesign.standby.model.TemperatureUnit.CELSIUS
+                        prefs.edit().putString("pref_temp_unit", if (nextUnit == com.hoandesign.standby.model.TemperatureUnit.FAHRENHEIT) "F" else "C").apply()
+                    }
                 )
             }
 
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 3. Official Material Design Weather Vector Icon
-            WeatherVectorIcon(
-                condition = displayCondition,
-                size = if (h < 150.dp) 20.dp else 24.dp,
-                isNightMode = isNightMode
-            )
+            // 3 & 4. Weather Vector Icon & Condition Name
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(onClick = onWeatherClick)
+            ) {
+                WeatherVectorIcon(
+                    condition = displayCondition,
+                    size = if (h < 150.dp) 20.dp else 24.dp,
+                    isNightMode = isNightMode
+                )
+                Text(
+                    text = displayCondition,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = TextStyle(
+                        fontFamily = FontFamily.Default,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = conditionFontSize,
+                        color = if (isNightMode) Color(0xEEFF453A) else TextPrimary
+                    )
+                )
+            }
 
             Spacer(modifier = Modifier.height(3.dp))
-
-            // 4. Condition Name (Bold)
-            Text(
-                text = displayCondition,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = TextStyle(
-                    fontFamily = FontFamily.Default,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = conditionFontSize,
-                    color = if (isNightMode) Color(0xEEFF453A) else TextPrimary
-                )
-            )
 
             // 5. Daily Range (e.g. H:91° L:62°)
             Text(
@@ -244,7 +261,10 @@ fun WeatherWidget(
                     fontSize = rangeFontSize,
                     letterSpacing = 0.02.em,
                     color = if (isNightMode) Color(0x99FF453A) else TextSecondary
-                )
+                ),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable(onClick = onWeatherClick)
             )
         }
     }

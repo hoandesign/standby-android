@@ -34,91 +34,91 @@ class SensorsAndWidgetsTest {
     fun testWmoWeatherCodeMapping_clearConditions() {
         val clearSky = mapWmoCodeToCondition(0)
         assertEquals("Clear Sky", clearSky.first)
-        assertEquals("☀️", clearSky.second)
+        assertEquals("clear_sky", clearSky.second)
 
         val mainlyClear = mapWmoCodeToCondition(1)
         assertEquals("Mainly Clear", mainlyClear.first)
-        assertEquals("🌤️", mainlyClear.second)
+        assertEquals("mainly_clear", mainlyClear.second)
     }
 
     @Test
     fun testWmoWeatherCodeMapping_cloudyAndOvercastConditions() {
         val partlyCloudy = mapWmoCodeToCondition(2)
         assertEquals("Partly Cloudy", partlyCloudy.first)
-        assertEquals("⛅", partlyCloudy.second)
+        assertEquals("partly_cloudy", partlyCloudy.second)
 
         val overcast = mapWmoCodeToCondition(3)
         assertEquals("Overcast", overcast.first)
-        assertEquals("☁️", overcast.second)
+        assertEquals("overcast", overcast.second)
     }
 
     @Test
     fun testWmoWeatherCodeMapping_rainConditions() {
         val lightRain = mapWmoCodeToCondition(61)
         assertEquals("Light Rain", lightRain.first)
-        assertEquals("🌧️", lightRain.second)
+        assertEquals("rain_light", lightRain.second)
 
         val moderateRain = mapWmoCodeToCondition(63)
         assertEquals("Moderate Rain", moderateRain.first)
-        assertEquals("🌧️", moderateRain.second)
+        assertEquals("rain_moderate", moderateRain.second)
 
         val heavyRain = mapWmoCodeToCondition(65)
         assertEquals("Heavy Rain", heavyRain.first)
-        assertEquals("🌧️", heavyRain.second)
+        assertEquals("rain_heavy", heavyRain.second)
 
         val rainShowers = mapWmoCodeToCondition(80)
         assertEquals("Rain Showers", rainShowers.first)
-        assertEquals("🌦️", rainShowers.second)
+        assertEquals("rain_showers", rainShowers.second)
     }
 
     @Test
     fun testWmoWeatherCodeMapping_snowConditions() {
         val lightSnow = mapWmoCodeToCondition(71)
         assertEquals("Light Snow", lightSnow.first)
-        assertEquals("🌨️", lightSnow.second)
+        assertEquals("snow_light", lightSnow.second)
 
         val moderateSnow = mapWmoCodeToCondition(73)
         assertEquals("Moderate Snow", moderateSnow.first)
-        assertEquals("🌨️", moderateSnow.second)
+        assertEquals("snow_moderate", moderateSnow.second)
 
         val heavySnow = mapWmoCodeToCondition(75)
         assertEquals("Heavy Snow", heavySnow.first)
-        assertEquals("🌨️", heavySnow.second)
+        assertEquals("snow_heavy", heavySnow.second)
 
         val snowShowers = mapWmoCodeToCondition(85)
         assertEquals("Snow Showers", snowShowers.first)
-        assertEquals("🌨️", snowShowers.second)
+        assertEquals("snow_showers", snowShowers.second)
     }
 
     @Test
     fun testWmoWeatherCodeMapping_thunderstormConditions() {
         val thunderstorm = mapWmoCodeToCondition(95)
         assertEquals("Thunderstorm", thunderstorm.first)
-        assertEquals("⛈️", thunderstorm.second)
+        assertEquals("thunderstorm", thunderstorm.second)
 
         val severeThunder = mapWmoCodeToCondition(96)
         assertEquals("Thunderstorm with Hail", severeThunder.first)
-        assertEquals("⛈️", severeThunder.second)
+        assertEquals("thunderstorm_hail", severeThunder.second)
 
         val extremeThunder = mapWmoCodeToCondition(99)
         assertEquals("Thunderstorm with Hail", extremeThunder.first)
-        assertEquals("⛈️", extremeThunder.second)
+        assertEquals("thunderstorm_hail", extremeThunder.second)
     }
 
     @Test
     fun testWmoWeatherCodeMapping_fogDrizzleAndFallbacks() {
         val fog = mapWmoCodeToCondition(45)
         assertEquals("Foggy", fog.first)
-        assertEquals("🌫️", fog.second)
+        assertEquals("fog", fog.second)
 
         val drizzle = mapWmoCodeToCondition(51)
         assertEquals("Drizzle", drizzle.first)
-        assertEquals("🌦️", drizzle.second)
+        assertEquals("drizzle", drizzle.second)
 
         // Unknown code fallback
         val unknown = mapWmoCodeToCondition(999)
         assertEquals("Clear Sky", unknown.first)
-        assertEquals("☀️", unknown.second)
+        assertEquals("clear_sky", unknown.second)
     }
 
     // ---------------------------------------------------------------------------------------------

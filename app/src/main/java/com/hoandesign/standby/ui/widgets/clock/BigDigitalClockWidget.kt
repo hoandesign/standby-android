@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,12 +27,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.hoandesign.standby.util.SystemIntents
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -206,7 +209,7 @@ fun BigDigitalClockWidget(
                     }
                 }
 
-                // Center Digit Stack: Hours over Minutes
+                // Center Stacked Massive Digital Digits
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center
@@ -257,6 +260,7 @@ private fun DateBannerChip(
     fontSize: androidx.compose.ui.unit.TextUnit,
     isNightMode: Boolean
 ) {
+    val context = LocalContext.current
     val textColor = if (isNightMode) NightRed else TextPrimary
     Text(
         text = text.uppercase(),
@@ -266,7 +270,11 @@ private fun DateBannerChip(
             fontSize = fontSize,
             letterSpacing = 0.08.em,
             color = textColor
-        )
+        ),
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .clickable { SystemIntents.launchSystemCalendar(context) }
+            .padding(horizontal = 4.dp, vertical = 2.dp)
     )
 }
 
@@ -280,6 +288,7 @@ private fun AlarmIndicatorChip(
     tint: Color,
     isNightMode: Boolean
 ) {
+    val context = LocalContext.current
     val chipBg = if (isNightMode) Color(0x33FF453A) else StandbyCardBgSecondary
     val contentColor = if (isNightMode) NightRed else TextSecondary
     val iconSizeDp = with(LocalDensity.current) { (fontSize * 1.05f).toDp() }
@@ -288,6 +297,7 @@ private fun AlarmIndicatorChip(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
             .background(chipBg)
+            .clickable { SystemIntents.launchAlarmClock(context) }
             .padding(horizontal = 8.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center
     ) {

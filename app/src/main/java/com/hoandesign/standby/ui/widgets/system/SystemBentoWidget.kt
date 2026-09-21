@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.hoandesign.standby.data.SystemTelemetryHelper
+import com.hoandesign.standby.util.SystemIntents
 import com.hoandesign.standby.ui.theme.AccentBlue
 import com.hoandesign.standby.ui.theme.AccentCyan
 import com.hoandesign.standby.ui.theme.AccentGreen
@@ -131,6 +132,7 @@ fun SystemBentoWidget(
                     accentColor = if (isNightMode) NightRed else AccentCyan,
                     isNightMode = isNightMode,
                     onClick = {
+                        SystemIntents.launchWifiSettings(context)
                         connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
                     },
                     modifier = Modifier.weight(1f)
@@ -144,6 +146,7 @@ fun SystemBentoWidget(
                     accentColor = if (isNightMode) NightRed else AccentBlue,
                     isNightMode = isNightMode,
                     onClick = {
+                        SystemIntents.launchBluetoothSettings(context)
                         connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
                     },
                     modifier = Modifier.weight(1f)
@@ -157,6 +160,7 @@ fun SystemBentoWidget(
                     accentColor = if (isNightMode) NightRed else AccentGreen,
                     isNightMode = isNightMode,
                     onClick = {
+                        SystemIntents.launchCellularSettings(context)
                         connectivity = SystemTelemetryHelper.getNetworkConnectivity(context)
                     },
                     modifier = Modifier.weight(1f)
@@ -165,7 +169,11 @@ fun SystemBentoWidget(
 
             // Center: Live Disk Storage Progress Ring & RAM Info
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { SystemIntents.launchStorageSettings(context) }
+                    .padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
