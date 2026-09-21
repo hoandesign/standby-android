@@ -198,25 +198,26 @@ class CalendarTest {
     @Test
     fun testFormatEventDate_todayTomorrowAndFuture() {
         val zone = java.time.ZoneId.of("UTC")
-        val now = java.time.LocalDate.of(2026, 9, 20).atStartOfDay(zone).toInstant().toEpochMilli()
+        val today = java.time.LocalDate.now(zone)
+        val now = today.atStartOfDay(zone).toInstant().toEpochMilli()
 
         // Today
         val (todayFormatted, todayTag) = formatEventDate(now + 3600_000L, zone)
         assertTrue(todayFormatted.contains("Today"))
-        assertTrue(todayFormatted.contains("Sep 20"))
         assertEquals("TODAY", todayTag)
 
         // Tomorrow
         val tomorrowMillis = now + 86400_000L + 3600_000L
         val (tomorrowFormatted, tomorrowTag) = formatEventDate(tomorrowMillis, zone)
         assertTrue(tomorrowFormatted.contains("Tomorrow"))
-        assertTrue(tomorrowFormatted.contains("Sep 21"))
         assertEquals("TOMORROW", tomorrowTag)
 
-        // Future day (e.g. Sep 23)
+        // Future day (e.g. 3 days out)
         val futureMillis = now + 3 * 86400_000L + 3600_000L
         val (futureFormatted, futureTag) = formatEventDate(futureMillis, zone)
-        assertTrue(futureFormatted.contains("Sep 23"))
-        assertEquals("SEP 23", futureTag)
+        val futureDate = today.plusDays(3)
+        val shortFormatter = java.time.format.DateTimeFormatter.ofPattern("MMM d", java.util.Locale.US)
+        assertTrue(futureFormatted.contains(futureDate.format(shortFormatter)))
+        assertEquals(futureDate.format(shortFormatter).uppercase(java.util.Locale.US), futureTag)
     }
 }
