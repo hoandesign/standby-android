@@ -110,6 +110,44 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
     * **Headless Terminal Authentication:** For remote terminals, CI/CD runners, or environments where local browsers fail to open, always use `npx -y firebase-tools@latest login --no-localhost`.
     * **Automated Pre-Flight Diagnostics:** Include a Firebase and Google Cloud environment check in `scripts/turn_runner.sh` to guarantee that cloud testing and deployment tooling are functional before executing builds.
 
+14. **Cross-Turn Task & Project Tracking with Notion Linear Hub:**
+    * **Linear Model Integration:** All long-running features, bug fixes, refactors, and architectural tasks MUST be logged and tracked in the dedicated **Notion Linear Hub** (`📐 Linear Hub (Agent Task Tracker)`).
+    * **GitHub & PR Linkage Mandate:**
+      - Every project MUST have its repository URL populated in the `GitHub URL` property (e.g. `https://github.com/hoandesign/standby-android`).
+      - Every task involving code changes MUST record its associated Pull Request branch or PR link in the `Pull Requests` property (`--pr "PR #..."` or full URL).
+    * **Mandatory Task-Level Plan & Subtasks:**
+      - Every non-trivial task created in Notion MUST contain an inline **🎯 Implementation Plan** and a granular **📋 Subtasks Checklist** directly within the Notion task page body (`python3 scripts/notion_tracker.py add-plan <id> --plan "..." --subtasks "..."` or via `--plan` and `--subtasks` upon creation).
+      - For multi-component tasks, create explicit child subtasks linked via the `Parent Task` self-relation (`python3 scripts/notion_tracker.py add-subtask --parent SBY-X --title "..."`).
+      - When subtasks are completed, update the checklist markers `[✔]` in the page body and advance child task statuses to `Done`.
+    * **Natural Sentence Case Task Naming Standard:**
+      - All task and subtask titles MUST be written in **normal daily sentence casing** (e.g. *"Auto-docking Qi charging launch and light sensor night mode"*, *"Fix weather station auto-refresh"*, *"Wave-to-wake proximity sensor display dimming"*).
+      - **Strict Prohibition of AI Title Case:** Never capitalize every single word in a task title (e.g. do NOT write *"Auto-Docking Qi Charging Launch & Light Sensor Night Mode"*).
+      - Capitalize ONLY the initial letter of the sentence, proper nouns, and technical acronyms or class names (e.g. *GPS, Qi, USB, Android, API, Room, PR, ChargingReceiver*).
+    * **Automated CLI Tracker (`scripts/notion_tracker.py`):**
+      - Before beginning execution in a turn, query active issues:
+        ```bash
+        python3 scripts/notion_tracker.py list-tasks --status "In Progress"
+        ```
+      - To create a new issue with natural sentence casing, plan, and subtasks:
+        ```bash
+        python3 scripts/notion_tracker.py create-task \
+          --title "Live solar arc clock equinox telemetry" \
+          --priority "High 🟠" \
+          --labels "Feature,Design / UI" \
+          --plan "Calculate solar altitude and azimuth dynamically using geographic coordinates" \
+          --subtasks "Coordinate math, Canvas rendering, Equinox markers"
+        ```
+      - To add a subtask linked to a parent issue:
+        ```bash
+        python3 scripts/notion_tracker.py add-subtask --parent SBY-5 --title "Codify subtask and plan rules in WORKFLOW.md"
+        ```
+      - Upon completion and audit certification, update the issue status:
+        ```bash
+        python3 scripts/notion_tracker.py update-task SBY-X --status "Done" --pr "PR #21"
+        ```
+    * **Dual Verification:** The assistant can view and interact with the live Notion board in real time via cmux browser computer-use (`cmux browser navigate <url> --surface surface:5`).
+    * **State Persistence:** Configuration (`scripts/notion_config.json`) persists project and database IDs so tracking operates reliably across different conversation contexts and subagents.
+
 ---
 
 ## 2. The 6-Step Autonomous "Do-Loop"

@@ -27,6 +27,12 @@ ACTIVE_PROJECT=$(npx -y firebase-tools@latest use 2>/dev/null | tail -n 1 | tr -
 echo "Firebase CLI version: $FIREBASE_VERSION"
 echo "Active Firebase project: $ACTIVE_PROJECT"
 
+# Notion Linear Tracker check (Rule 14)
+if [[ -f "$ROOT/scripts/notion_config.json" ]]; then
+    echo "Notion Linear Hub: Connected"
+    python3 scripts/notion_tracker.py list-tasks --status "In Progress" 2>/dev/null || true
+fi
+
 # Ensure app/google-services.json is present; if missing, fetch programmatically via Firebase CLI
 if [[ ! -f "$ROOT/app/google-services.json" ]] && [[ "$ACTIVE_PROJECT" != "unbound" ]]; then
     echo "Notice: app/google-services.json not found. Fetching programmatically via Firebase CLI..."

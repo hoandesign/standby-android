@@ -290,6 +290,51 @@ Validate builds on real physical Google Pixel 9 hardware running Android 16 (API
 
 Test results, execution logs, and captured screenshots are accessible through the web matrix link generated in the terminal output.
 
+### 7. Notion Linear Task Tracker (Cross-Turn Issue Tracking)
+
+StandBy Android tracks long-running projects, features, and bug fixes across agent turns via a dedicated **Linear-Clone Hub** in Notion:
+* **Hub Page:** [Linear Hub (Agent Task Tracker)](https://app.notion.com/p/Linear-Hub-Agent-Task-Tracker-3e280e72304c81b8b7c3dc9ef85d8ad3)
+* **Projects Database:** High-level apps and initiatives (`StandBy Android` [SBY]), with repository tracking via `GitHub URL`.
+* **Tasks Database:** Granular issues with statuses (`Backlog`, `Todo`, `In Progress`, `In Review`, `Done`, `Canceled`), priorities, assignees, estimates, multi-select labels, `Pull Requests` tracking, and self-relation `Parent Task` / `Sub-tasks`.
+* **Task Page Body:** Every task maintains an inline **🎯 Implementation Plan** and **📋 Subtasks Checklist** with progress checkboxes.
+
+#### Developer CLI Commands (`scripts/notion_tracker.py`)
+```bash
+# List all tracked projects with repository URLs
+python3 scripts/notion_tracker.py list-projects
+
+# View all active issues on the Linear board with PR references
+python3 scripts/notion_tracker.py list-tasks
+
+# View full details of a task, including linked subtasks, PRs, and page body plan
+python3 scripts/notion_tracker.py get-task SBY-5
+
+# Create a new issue with plan description and subtasks checklist
+python3 scripts/notion_tracker.py create-task \
+  --title "Live Solar Arc Clock Equinox Telemetry" \
+  --priority "High 🟠" \
+  --labels "Feature,Design / UI" \
+  --estimate 3 \
+  --plan "Calculate solar altitude and azimuth dynamically using geographic coordinates" \
+  --subtasks "Coordinate math, Canvas rendering, Equinox markers"
+
+# Add a child subtask linked to a parent task
+python3 scripts/notion_tracker.py add-subtask \
+  --parent SBY-5 \
+  --title "Codify Subtask & Plan Rules in WORKFLOW.md"
+
+# Add or append an implementation plan and checklist to an existing task
+python3 scripts/notion_tracker.py add-plan SBY-6 \
+  --plan "Auto-refresh weather telemetry on 30-minute intervals" \
+  --subtasks "Timer loop, Network check, Error chip"
+
+# Update an issue status, record a PR, or move to Done
+python3 scripts/notion_tracker.py update-task SBY-5 --status "Done" --pr "PR #21"
+
+# Check Notion API connectivity and database links
+python3 scripts/notion_tracker.py sync
+```
+
 ---
 
 ## Autonomous Development & Adversarial Audit Contract
@@ -352,6 +397,8 @@ standby-android/
 └── scripts/
     ├── audit_linter.py                   # Integrity gate & markdown audit validator
     ├── auditor_prompt_template.md        # Adversarial auditor prompt template
+    ├── notion_config.json                # Notion database and hub configuration
+    ├── notion_tracker.py                 # Linear-model cross-turn task tracker CLI
     ├── play_upload_internal.py           # Google Play Publisher API upload script
     ├── ship_play_internal.sh             # Legacy manual upload script
     └── turn_runner.sh                    # End-of-turn autonomous pipeline runner
