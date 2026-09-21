@@ -168,6 +168,14 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
     * **Dual Verification:** The assistant can view and interact with the live Notion board in real time via cmux browser computer-use (`cmux browser navigate <url> --surface surface:5`).
     * **State Persistence:** Configuration (`scripts/notion_config.json`) persists project and database IDs so tracking operates reliably across different conversation contexts and subagents.
 
+15. **Continuous Learning & QMD Memory Synchronization:**
+    * **Knowledge Persistence:** Whenever valuable lessons, bug resolutions, architectural patterns, or workflow optimizations are identified, they MUST be appended to `~/.gemini/LESSONS-LEARNED.md`.
+    * **Mandatory QMD Auto-Sync:** Immediately after modifying `LESSONS-LEARNED.md`, the agent MUST run:
+      ```bash
+      qmd update
+      ```
+      This automatically indexes the newly recorded knowledge into QMD's `gemini-config` collection, making it instantly retrievable for future semantic queries (`qmd query "[topic]"`) and pre-flight checks across all sessions.
+
 ---
 
 ## 2. The 6-Step Autonomous "Do-Loop"
