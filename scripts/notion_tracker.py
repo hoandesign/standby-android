@@ -301,6 +301,122 @@ def cmd_add_plan(args):
     append_plan_and_subtasks(page_id, plan_text=args.plan, subtasks=subtasks_list)
     print(f"✓ Plan and {len(subtasks_list or [])} checklist item(s) added to {args.task} page body.")
 
+def cmd_check_subtask(args):
+    page_id = find_task_by_key_or_id(args.task)
+    if not page_id:
+        print(f"Error: Task '{args.task}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    blocks_res = make_request(f"https://api.notion.com/v1/blocks/{page_id}/children")
+    blocks = blocks_res.get("results", [])
+    
+    todo_blocks = []
+    for b in blocks:
+        if b.get("type") == "to_do":
+            content = b.get("to_do", {})
+            text = "".join([t.get("plain_text", "") for t in content.get("rich_text", [])])
+            todo_blocks.append({
+                "id": b["id"],
+                "text": text,
+                "checked": content.get("checked", False)
+            })
+
+    if not todo_blocks:
+        print(f"No subtask checklist items found on {args.task}.", file=sys.stderr)
+        return
+
+    targets = []
+    if args.all:
+        targets = todo_blocks
+    elif args.index is not None:
+        if 1 <= args.index <= len(todo_blocks):
+            targets = [todo_blocks[args.index - 1]]
+        else:
+            print(f"Error: Index {args.index} out of range (1 to {len(todo_blocks)}).", file=sys.stderr)
+            sys.exit(1)
+    elif args.match:
+        m = args.match.lower()
+        targets = [t for t in todo_blocks if m in t["text"].lower()]
+        if not targets:
+            print(f"Error: No subtasks matching '{args.match}'.", file=sys.stderr)
+            sys.exit(1)
+    else:
+        print("Error: Specify --index <N>, --match <text>, or --all.", file=sys.stderr)
+        sys.exit(1)
+
+    new_checked = not args.uncheck
+    for t in targets:
+        make_request(
+            f"https://api.notion.com/v1/blocks/{t['id']}",
+            data={"to_do": {"checked": new_checked}},
+            method="PATCH"
+        )
+        status_str = f"{COLOR_GREEN}Checked [✔]{COLOR_RESET}" if new_checked else "[ ]"
+        print(f"✓ {status_str}: {t['text']}")
+
+def cmd_set_plan(args):
+    page_id = find_task_by_key_or_id(args.task)
+    if not page_id:
+        print(f"Error: Task '{args.task}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    blocks_res = make_request(f"https://api.notion.com/v1/blocks/{page_id}/children")
+    blocks = blocks_res.get("results", [])
+
+    existing_callout_id = None
+    for b in blocks:
+        if b.get("type") == "callout":
+            existing_callout_id = b["id"]
+            break
+
+    if existing_callout_id and args.plan:
+        make_request(
+            f"https://api.notion.com/v1/blocks/{existing_callout_id}",
+            data={"callout": {"rich_text": [{"type": "text", "text": {"content": args.plan}}]}},
+            method="PATCH"
+        )
+        print(f"✓ Updated implementation plan overview on {args.task}.")
+    elif args.plan:
+        new_blocks = [
+            {
+                "type": "heading_2",
+                "heading_2": {
+                    "rich_text": [{"type": "text", "text": {"content": "🎯 Implementation Plan"}}]
+                }
+            },
+            {
+                "type": "callout",
+                "callout": {
+                    "icon": {"type": "emoji", "emoji": "📝"},
+                    "rich_text": [{"type": "text", "text": {"content": args.plan}}]
+                }
+            }
+        ]
+        make_request(
+            f"https://api.notion.com/v1/blocks/{page_id}/children",
+            data={"children": new_blocks},
+            method="PATCH"
+        )
+        print(f"✓ Added implementation plan overview to {args.task}.")
+
+    if args.steps:
+        steps_list = [s.strip() for s in args.steps.split("\n") if s.strip()] if "\n" in args.steps else [s.strip() for s in args.steps.split("|") if s.strip()]
+        step_blocks = []
+        for s in steps_list:
+            step_blocks.append({
+                "type": "bulleted_list_item",
+                "bulleted_list_item": {
+                    "rich_text": [{"type": "text", "text": {"content": s}}]
+                }
+            })
+        if step_blocks:
+            make_request(
+                f"https://api.notion.com/v1/blocks/{page_id}/children",
+                data={"children": step_blocks},
+                method="PATCH"
+            )
+            print(f"✓ Added {len(step_blocks)} detail plan step(s) to {args.task}.")
+
 def cmd_update_task(args):
     page_id = find_task_by_key_or_id(args.task)
     if not page_id:
@@ -359,6 +475,16 @@ def cmd_get_task(args):
     print(f"PR List:      {COLOR_CYAN}{pr_text}{COLOR_RESET}")
     print(f"Parent Task:  {len(parent_rel)} linked")
     print(f"Sub-tasks:    {len(subtasks_rel)} linked")
+    for s_rel in subtasks_rel:
+        try:
+            ch_page = make_request(f"https://api.notion.com/v1/pages/{s_rel['id']}")
+            ch_props = ch_page.get("properties", {})
+            ch_key = ch_props.get("Identifier", {}).get("rich_text", [{}])[0].get("plain_text", "")
+            ch_title = ch_props.get("Task Name", {}).get("title", [{}])[0].get("plain_text", "")
+            ch_status = ch_props.get("Status", {}).get("select", {}).get("name", "")
+            print(f"              ↳ [{ch_key}] {ch_title} ({status_badge(ch_status)})")
+        except Exception:
+            pass
     print(f"Notion URL:   {page.get('url')}\n")
 
     # Fetch page body blocks
@@ -366,6 +492,7 @@ def cmd_get_task(args):
     blocks = blocks_res.get("results", [])
     if blocks:
         print(f"{COLOR_BOLD}--- Task Page Body Content ---{COLOR_RESET}")
+        todo_idx = 1
         for b in blocks:
             btype = b.get("type")
             content = b.get(btype, {})
@@ -380,7 +507,12 @@ def cmd_get_task(args):
             elif btype == "to_do":
                 checked = content.get("checked", False)
                 mark = f"{COLOR_GREEN}[✔]{COLOR_RESET}" if checked else "[ ]"
-                print(f"  {mark} {text}")
+                print(f"  {COLOR_GRAY}{todo_idx}.{COLOR_RESET} {mark} {text}")
+                todo_idx += 1
+            elif btype == "bulleted_list_item":
+                print(f"  • {text}")
+            elif btype == "numbered_list_item":
+                print(f"  1. {text}")
             elif btype == "paragraph" and text:
                 print(f"  {text}")
         print()
@@ -459,6 +591,22 @@ def main():
     p_ut.add_argument("--pr", help="Pull Request URL or reference")
     p_ut.add_argument("--parent", help="Parent Task identifier")
     p_ut.set_defaults(func=cmd_update_task)
+
+    # check-subtask
+    p_cs = subparsers.add_parser("check-subtask", help="Check off or uncheck a subtask item on a task page")
+    p_cs.add_argument("task", help="Task Identifier (e.g. SBY-10)")
+    p_cs.add_argument("--index", type=int, help="1-based index of subtask to toggle")
+    p_cs.add_argument("--match", help="Substring to match in subtask text")
+    p_cs.add_argument("--all", action="store_true", help="Toggle all subtasks")
+    p_cs.add_argument("--uncheck", action="store_true", help="Uncheck instead of checking")
+    p_cs.set_defaults(func=cmd_check_subtask)
+
+    # set-plan
+    p_sp = subparsers.add_parser("set-plan", help="Update or enrich implementation plan and detail steps on a task")
+    p_sp.add_argument("task", help="Task Identifier (e.g. SBY-10)")
+    p_sp.add_argument("--plan", help="Updated plan overview description")
+    p_sp.add_argument("--steps", help="Newline or pipe-separated detail implementation steps")
+    p_sp.set_defaults(func=cmd_set_plan)
 
     # sync
     p_sync = subparsers.add_parser("sync", help="Check sync connectivity and URLs")

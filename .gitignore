@@ -10,3 +10,4 @@ local.properties
 *.keystore
 keystore.properties
 play-service-account*.json
+__pycache__/

@@ -115,10 +115,22 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
     * **GitHub & PR Linkage Mandate:**
       - Every project MUST have its repository URL populated in the `GitHub URL` property (e.g. `https://github.com/hoandesign/standby-android`).
       - Every task involving code changes MUST record its associated Pull Request branch or PR link in the `Pull Requests` property (`--pr "PR #..."` or full URL).
-    * **Mandatory Task-Level Plan & Subtasks:**
-      - Every non-trivial task created in Notion MUST contain an inline **🎯 Implementation Plan** and a granular **📋 Subtasks Checklist** directly within the Notion task page body (`python3 scripts/notion_tracker.py add-plan <id> --plan "..." --subtasks "..."` or via `--plan` and `--subtasks` upon creation).
-      - For multi-component tasks, create explicit child subtasks linked via the `Parent Task` self-relation (`python3 scripts/notion_tracker.py add-subtask --parent SBY-X --title "..."`).
-      - When subtasks are completed, update the checklist markers `[✔]` in the page body and advance child task statuses to `Done`.
+    * **Mandatory Detailed Plan & Real-Time Subtask Checking in Notion:**
+      - **Pre-Execution Detailed Plan Mandate:** Before writing code, the agent MUST publish a detailed, multi-step engineering plan into the Notion task page body:
+        ```bash
+        python3 scripts/notion_tracker.py set-plan SBY-X \
+          --plan "Comprehensive overview of the feature architecture..." \
+          --steps "Phase 1: Architecture & data models|Phase 2: UI implementation & touch target scoping|Phase 3: Automated tests & boundary coverage|Phase 4: Adversarial grill & Play Console release"
+        ```
+      - **Real-Time Subtask Checking (In-Flight Updates):** Do NOT wait until the very end to update Notion. As each subtask or checklist milestone is implemented in code, the agent MUST immediately check it off in Notion in real time:
+        ```bash
+        # Check off by keyword match
+        python3 scripts/notion_tracker.py check-subtask SBY-X --match "Weather"
+        # Or check off by 1-based index
+        python3 scripts/notion_tracker.py check-subtask SBY-X --index 2
+        ```
+      - **Child Task Lifecycle:** For multi-component epics, create child subtasks linked via `Parent Task` (`add-subtask`). Move child tasks to `In Progress` when starting them, and `Done` immediately when verified.
+      - **Final Completion Gate:** Before marking the parent task `Done`, run `python3 scripts/notion_tracker.py get-task SBY-X` to affirmatively verify that 100% of checklist items are marked `[✔]` and all child tasks are `Done`.
     * **Natural Sentence Case Task Naming Standard:**
       - All task and subtask titles MUST be written in **normal daily sentence casing** (e.g. *"Auto-docking Qi charging launch and light sensor night mode"*, *"Fix weather station auto-refresh"*, *"Wave-to-wake proximity sensor display dimming"*).
       - **Strict Prohibition of AI Title Case:** Never capitalize every single word in a task title (e.g. do NOT write *"Auto-Docking Qi Charging Launch & Light Sensor Night Mode"*).
@@ -140,6 +152,14 @@ Every iteration of StandBy Android must rigorously adhere to the following non-n
       - To add a subtask linked to a parent issue:
         ```bash
         python3 scripts/notion_tracker.py add-subtask --parent SBY-5 --title "Codify subtask and plan rules in WORKFLOW.md"
+        ```
+      - To update plan details and steps:
+        ```bash
+        python3 scripts/notion_tracker.py set-plan SBY-X --plan "..." --steps "Step 1...|Step 2..."
+        ```
+      - To check off subtasks in real time:
+        ```bash
+        python3 scripts/notion_tracker.py check-subtask SBY-X --match "..."
         ```
       - Upon completion and audit certification, update the issue status:
         ```bash
@@ -164,14 +184,15 @@ flowchart TD
     E -->|Score >= 9.5 & Validated (PASS)| F["Step 6: Automated Play Store Rollout & Git Push"]
 ```
 
-### Step 1: Research, Design & Planning (Task List First)
+### Step 1: Research, Design & Planning (Notion Task & Plan First)
 * Review user requests, complaints, and design references with deep sequential thinking.
 * Author or update `PLAN.md` directly in the project directory before touching code.
-* Break down the work into discrete, testable items with clear success criteria.
+* **Notion Task Binding & Pre-Execution Plan:** Query active Notion tasks (`python3 scripts/notion_tracker.py list-tasks`), move the active issue to `In Progress` (`update-task SBY-X --status "In Progress"`), and publish the detailed implementation plan and phase breakdown directly into the Notion page body (`set-plan SBY-X --plan "..." --steps "..."`).
 * Present the proposed plan and task list to the user with transparent progress tracking.
 
-### Step 2: Live Task Tracking & Modular Implementation
+### Step 2: Live Task Tracking & Real-Time Milestone Checking
 * Maintain an active progress tracker (`[ ] Pending`, `[▶] In Progress`, `[✔] Done`) and report status updates to the user as tasks advance.
+* **Real-Time Notion Subtask Checking:** As each subtask or checklist milestone is implemented in code, immediately check it off in Notion (`python3 scripts/notion_tracker.py check-subtask SBY-X --match "..."`).
 * Keep files focused and modular (< 500 lines per file).
 * Separate concerns: coordinator (`MainStandbyPager.kt`), top bar (`StandbyTopNavigationMenu.kt`), slot container (`DynamicSlotCard.kt`), and edit stack (`EditModeWidgetStack.kt`).
 
